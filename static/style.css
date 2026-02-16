@@ -7,6 +7,16 @@ details summary label {
     cursor: pointer;
 }
 
+details > .grid,
+details > label,
+details > fieldset {
+    margin-bottom: 1.5rem;
+}
+
+details > label {
+    padding-left: 1rem;
+}
+
 article header h2 {
     margin-bottom: 0;
 }
