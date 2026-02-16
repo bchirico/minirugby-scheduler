@@ -75,7 +75,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
 
         # --- Stats table (left) + Field diagram (right) side by side ---
         # Layout: stats table takes left ~90mm, field diagram on the right
-        stats_table_w = 85  # total width of stats columns
+        stats_table_w = 95  # total width of stats columns (must match stat_widths sum)
         gap = 10  # gap between table and diagram
         draw_w = 80  # fixed field diagram width in mm
         draw_h = draw_w * config.field_width_max / config.field_length_max

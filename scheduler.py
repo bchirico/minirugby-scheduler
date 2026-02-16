@@ -77,9 +77,7 @@ def _find_best_group(
         max_deg = max(degree.values()) if degree else 0
         return (len(group), min_rest, -max_deg, total_rest)
 
-    def _search(
-        start: int, current: list[tuple[int, int]], used: set[int]
-    ) -> None:
+    def _search(start: int, current: list[tuple[int, int]], used: set[int]) -> None:
         nonlocal best, best_score
         if current:
             s = _score(current)
