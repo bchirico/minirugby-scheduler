@@ -14,11 +14,20 @@ Generate round-robin tournament schedules for kids' rugby with automatic matchup
 ## Setup
 
 ```bash
-pip install -r requirements.txt
-python3 app.py
+make install
+make run
 ```
 
 Open http://localhost:5050
+
+## Development
+
+```bash
+make test      # Run tests
+make lint      # Run linter (ruff check)
+make format    # Format code (ruff format)
+make all       # Format + lint + test
+```
 
 ## How it works
 
