@@ -2,7 +2,7 @@ from io import BytesIO
 
 from fpdf import FPDF
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.styles import Font, PatternFill
 
 from models import CATEGORIES, Schedule
 

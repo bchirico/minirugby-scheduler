@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from itertools import combinations
 
-from models import CATEGORIES, Match, Schedule, ScheduleRequest
+from models import Match, Schedule, ScheduleRequest
 
 
 def round_robin_order(n: int) -> list[list[tuple[int, int]]]:
@@ -41,7 +41,6 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
 
     # All pairs to schedule
     all_pairs = list(combinations(range(n), 2))
-    total_matches = len(all_pairs)
 
     # Max simultaneous matches per slot: limited by fields and need for 3 teams per match
     max_simultaneous = min(num_fields, n // 3)
