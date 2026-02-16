@@ -3,3 +3,4 @@ fpdf2
 openpyxl
 gunicorn
 pytest
+ruff
