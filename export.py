@@ -95,7 +95,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
 
         stat_widths = [40, 22, 23]
-        stat_headers = ["Squadra", "Partite", "Arb."]
+        stat_headers = ["Squadra", "Partite", "Arbitraggi"]
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(220, 220, 220)
         for i, h in enumerate(stat_headers):
