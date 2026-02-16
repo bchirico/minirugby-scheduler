@@ -43,6 +43,66 @@ def _ordered_pairs(n: int) -> list[tuple[int, int]]:
     return ordered
 
 
+def _find_best_group(
+    remaining: list[tuple[int, int]],
+    max_size: int,
+    last_played: dict[int, float],
+    slot_idx: int,
+) -> list[tuple[int, int]]:
+    """Find the best group of non-conflicting pairs for a time slot.
+
+    Priorities: 1) maximize group size (field utilization),
+    2) maximize minimum rest across pairs, 3) minimize max remaining
+    degree (keep future slots packable), 4) maximize total rest.
+    """
+    best: list[tuple[int, int]] = []
+    best_score: tuple = (-1, float("-inf"), float("inf"), float("-inf"))
+
+    def _score(group: list[tuple[int, int]]) -> tuple:
+        min_rest = min(
+            min(slot_idx - last_played[t1], slot_idx - last_played[t2])
+            for t1, t2 in group
+        )
+        total_rest = sum(
+            (slot_idx - last_played[t1]) + (slot_idx - last_played[t2])
+            for t1, t2 in group
+        )
+        # Compute max degree in remaining graph after removing this group
+        group_set = set(group)
+        degree: dict[int, int] = {}
+        for pair in remaining:
+            if pair not in group_set:
+                for t in pair:
+                    degree[t] = degree.get(t, 0) + 1
+        max_deg = max(degree.values()) if degree else 0
+        return (len(group), min_rest, -max_deg, total_rest)
+
+    def _search(
+        start: int, current: list[tuple[int, int]], used: set[int]
+    ) -> None:
+        nonlocal best, best_score
+        if current:
+            s = _score(current)
+            if s > best_score:
+                best = current[:]
+                best_score = s
+        if len(current) >= max_size:
+            return
+        for i in range(start, len(remaining)):
+            t1, t2 = remaining[i]
+            if t1 not in used and t2 not in used:
+                current.append(remaining[i])
+                used.add(t1)
+                used.add(t2)
+                _search(i + 1, current, used)
+                current.pop()
+                used.discard(t1)
+                used.discard(t2)
+
+    _search(0, [], set())
+    return best
+
+
 def _fill_slots(
     n: int,
     max_simultaneous: int,
@@ -52,52 +112,26 @@ def _fill_slots(
     referee_counts = {i: 0 for i in range(n)}
     warnings: list[str] = []
 
-    # Build slot pair lists using round-carry: process round-robin rounds,
-    # take up to max_simultaneous per slot, carry the rest to the next round.
-    rounds = round_robin_order(n)
-    carry: list[tuple[int, int]] = []
+    remaining = list(combinations(range(n), 2))
+    last_played: dict[int, float] = {i: float(-n) for i in range(n)}
     slot_pairs_list: list[list[tuple[int, int]]] = []
+    slot_idx = 0
 
-    for rnd in rounds:
-        available = carry + list(rnd)
-        slot_pairs: list[tuple[int, int]] = []
-        used: set[int] = set()
-        rest: list[tuple[int, int]] = []
-        for p in available:
-            if (
-                len(slot_pairs) < max_simultaneous
-                and p[0] not in used
-                and p[1] not in used
-            ):
-                slot_pairs.append(p)
-                used.update(p)
-            else:
-                rest.append(p)
-        slot_pairs_list.append(slot_pairs)
-        carry = rest
-
-    # Schedule remaining carry pairs
-    while carry:
-        slot_pairs = []
-        used = set()
-        rest = []
-        for p in carry:
-            if (
-                len(slot_pairs) < max_simultaneous
-                and p[0] not in used
-                and p[1] not in used
-            ):
-                slot_pairs.append(p)
-                used.update(p)
-            else:
-                rest.append(p)
+    while remaining:
+        slot_pairs = _find_best_group(
+            remaining, max_simultaneous, last_played, slot_idx
+        )
         if not slot_pairs:
             warnings.append(
                 "Non è stato possibile programmare tutte le partite. Alcune partite potrebbero mancare."
             )
             break
         slot_pairs_list.append(slot_pairs)
-        carry = rest
+        for t1, t2 in slot_pairs:
+            remaining.remove((t1, t2))
+            last_played[t1] = slot_idx
+            last_played[t2] = slot_idx
+        slot_idx += 1
 
     # Assign referees to each slot
     for scheduled_this_slot in slot_pairs_list:
