@@ -1,0 +1,22 @@
+details summary {
+    cursor: pointer;
+}
+
+details summary label {
+    display: inline;
+    cursor: pointer;
+}
+
+article header h2 {
+    margin-bottom: 0;
+}
+
+@media print {
+    button, a[role="button"], .no-print {
+        display: none !important;
+    }
+
+    article {
+        break-inside: avoid;
+    }
+}

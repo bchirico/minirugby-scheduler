@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hidden form for downloads (re-submits same data) -->
+<form method="post" id="downloadForm" style="display:none">
+    {% for key, value in form_data.items(True) %}
+    <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endfor %}
+</form>
+
+<div class="grid">
+    <button onclick="submitDownload('/download/pdf')">Download PDF</button>
+    <button onclick="submitDownload('/download/excel')" class="secondary">Download Excel</button>
+    <a href="/" role="button" class="outline">Back to Form</a>
+</div>
+
+{% for schedule in schedules %}
+<article>
+    <header>
+        <h2>{{ schedule.category }}</h2>
+        <small>{{ schedule.matches | length }} matches | {{ schedule.stats | length }} teams</small>
+    </header>
+
+    {% if schedule.warnings %}
+    <div style="background: var(--pico-color-amber-100); padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        {% for w in schedule.warnings %}
+        <p><strong>Note:</strong> {{ w }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set ns = namespace(current_slot=-1) %}
+    {% for match in schedule.matches %}
+        {% if match.time_slot != ns.current_slot %}
+            {% if ns.current_slot >= 0 %}
+            </tbody></table>
+            {% endif %}
+            {% set ns.current_slot = match.time_slot %}
+            <h4>Slot {{ match.time_slot + 1 }} &mdash; {{ match.start_time }}</h4>
+            <table>
+            <thead><tr>
+                <th>Field</th>
+                <th>Match</th>
+                <th>Referee</th>
+            </tr></thead>
+            <tbody>
+        {% endif %}
+        <tr>
+            <td>Field {{ match.field_number }}</td>
+            <td><strong>{{ match.team1 }}</strong> vs <strong>{{ match.team2 }}</strong></td>
+            <td>{{ match.referee }}</td>
+        </tr>
+    {% endfor %}
+    {% if schedule.matches %}
+    </tbody></table>
+    {% endif %}
+
+    <h4>Fairness Stats</h4>
+    <table>
+        <thead><tr>
+            <th>Team</th>
+            <th>Matches Played</th>
+            <th>Referee Duties</th>
+        </tr></thead>
+        <tbody>
+        {% for team, stat in schedule.stats.items() %}
+        <tr>
+            <td>{{ team }}</td>
+            <td>{{ stat.played }}</td>
+            <td>{{ stat.refereed }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</article>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function submitDownload(url) {
+    const form = document.getElementById('downloadForm');
+    form.action = url;
+    form.submit();
+}
+</script>
+{% endblock %}
