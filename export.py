@@ -17,13 +17,13 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
 
         # Title
         pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(0, 12, f"{sched.category} Schedule", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 12, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 10)
         pdf.cell(
             0,
             6,
-            f"{len(sched.stats)} teams | {len(sched.matches)} matches | "
-            f"{config.match_duration} min + {config.break_duration} min break",
+            f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
+            f"{config.match_duration} min + {config.break_duration} min pausa",
             new_x="LMARGIN",
             new_y="NEXT",
         )
@@ -32,13 +32,13 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         # Warnings
         for w in sched.warnings:
             pdf.set_font("Helvetica", "I", 9)
-            pdf.cell(0, 5, f"Note: {w}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"Nota: {w}", new_x="LMARGIN", new_y="NEXT")
         if sched.warnings:
             pdf.ln(2)
 
         # Match table
         col_widths = [20, 25, 55, 55, 35]  # #, Time, Field, Match, Referee
-        headers = ["#", "Time", "Field", "Match", "Referee"]
+        headers = ["#", "Orario", "Campo", "Partita", "Arbitro"]
 
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_fill_color(220, 220, 220)
@@ -66,7 +66,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
 
             pdf.cell(col_widths[0], 7, str(m.match_number), border=1)
             pdf.cell(col_widths[1], 7, m.start_time, border=1)
-            pdf.cell(col_widths[2], 7, f"Field {m.field_number}", border=1)
+            pdf.cell(col_widths[2], 7, f"Campo {m.field_number}", border=1)
             pdf.cell(col_widths[3], 7, f"{m.team1} vs {m.team2}", border=1)
             pdf.cell(col_widths[4], 7, m.referee, border=1)
             pdf.ln()
@@ -92,10 +92,10 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
 
         # -- Stats table (left column) --
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(stats_table_w, 8, "Fairness Stats", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
 
         stat_widths = [40, 22, 23]
-        stat_headers = ["Team", "Matches", "Ref"]
+        stat_headers = ["Squadra", "Partite", "Arb."]
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(220, 220, 220)
         for i, h in enumerate(stat_headers):
@@ -118,7 +118,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         # Field title
         pdf.set_font("Helvetica", "B", 11)
         pdf.set_xy(field_x, field_y)
-        pdf.cell(draw_w, 8, "Field Dimensions")
+        pdf.cell(draw_w, 8, "Dimensioni Campo")
         field_y += 8
 
         # Green fill for the field
@@ -187,7 +187,7 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
         ws = wb.create_sheet(title=sched.category)
 
         # Schedule table
-        headers = ["#", "Time", "Field", "Team 1", "Team 2", "Referee"]
+        headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2", "Arbitro"]
         ws.append(headers)
         for i, cell in enumerate(ws[1], 1):
             cell.font = header_font
@@ -198,7 +198,7 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
                 [
                     m.match_number,
                     m.start_time,
-                    f"Field {m.field_number}",
+                    f"Campo {m.field_number}",
                     m.team1,
                     m.team2,
                     m.referee,
@@ -208,7 +208,7 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
         # Blank row then stats
         ws.append([])
         stats_start = ws.max_row + 1
-        ws.append(["Team", "Matches Played", "Referee Duties"])
+        ws.append(["Squadra", "Partite Giocate", "Arbitraggi"])
         for cell in ws[stats_start]:
             if cell.value:
                 cell.font = header_font

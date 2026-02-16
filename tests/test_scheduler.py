@@ -171,7 +171,7 @@ class TestGenerateSchedule:
         all_teams = set()
         for m in sched.matches:
             all_teams.update([m.team1, m.team2])
-        assert all_teams == {"Team 1", "Team 2", "Team 3", "Team 4"}
+        assert all_teams == {"Squadra 1", "Squadra 2", "Squadra 3", "Squadra 4"}
 
     def test_time_slots_u8(self):
         req = ScheduleRequest(
@@ -214,14 +214,14 @@ class TestGenerateSchedule:
             category="U8", num_teams=8, num_fields=1, start_time="09:00"
         )
         sched = generate_schedule(req)
-        assert any("starting after slot 2" in w for w in sched.warnings)
+        assert any("iniziano dopo lo slot 2" in w for w in sched.warnings)
 
     def test_early_start_ok_with_enough_fields(self):
         req = ScheduleRequest(
             category="U8", num_teams=6, num_fields=2, start_time="09:00"
         )
         sched = generate_schedule(req)
-        assert not any("starting after slot 2" in w for w in sched.warnings)
+        assert not any("iniziano dopo lo slot 2" in w for w in sched.warnings)
 
     def test_non_dedicated_uses_fewer_slots(self):
         req_ded = ScheduleRequest(
@@ -264,13 +264,13 @@ class TestResolveTeamNames:
             start_time="09:00",
             team_names=["A", "B"],
         )
-        assert _resolve_team_names(req) == ["Team 1", "Team 2", "Team 3"]
+        assert _resolve_team_names(req) == ["Squadra 1", "Squadra 2", "Squadra 3"]
 
     def test_falls_back_to_defaults_when_empty(self):
         req = ScheduleRequest(
             category="U8", num_teams=3, num_fields=1, start_time="09:00"
         )
-        assert _resolve_team_names(req) == ["Team 1", "Team 2", "Team 3"]
+        assert _resolve_team_names(req) == ["Squadra 1", "Squadra 2", "Squadra 3"]
 
 
 class TestOrderedPairs:
@@ -377,7 +377,7 @@ class TestCheckEarlyStart:
             [(0, 2, 1, 1)],
         ]
         warnings = _check_early_start(3, ["A", "B", "C"], slots)
-        assert any("starting after slot 2" in w for w in warnings)
+        assert any("iniziano dopo lo slot 2" in w for w in warnings)
 
 
 class TestBuildMatches:

@@ -9,22 +9,22 @@
 </form>
 
 <div class="grid">
-    <button onclick="submitDownload('/download/pdf')">Download PDF</button>
-    <button onclick="submitDownload('/download/excel')" class="secondary">Download Excel</button>
-    <a href="/" role="button" class="outline">Back to Form</a>
+    <button onclick="submitDownload('/download/pdf')">Scarica PDF</button>
+    <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
+    <a href="/" role="button" class="outline">Torna al Modulo</a>
 </div>
 
 {% for schedule in schedules %}
 <article>
     <header>
         <h2>{{ schedule.category }}</h2>
-        <small>{{ schedule.matches | length }} matches | {{ schedule.stats | length }} teams</small>
+        <small>{{ schedule.matches | length }} partite | {{ schedule.stats | length }} squadre</small>
     </header>
 
     {% if schedule.warnings %}
     <div style="background: var(--pico-color-amber-100); padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
         {% for w in schedule.warnings %}
-        <p><strong>Note:</strong> {{ w }}</p>
+        <p><strong>Nota:</strong> {{ w }}</p>
         {% endfor %}
     </div>
     {% endif %}
@@ -39,14 +39,14 @@
             <h4>Slot {{ match.time_slot + 1 }} &mdash; {{ match.start_time }}</h4>
             <table>
             <thead><tr>
-                <th>Field</th>
-                <th>Match</th>
-                <th>Referee</th>
+                <th>Campo</th>
+                <th>Partita</th>
+                <th>Arbitro</th>
             </tr></thead>
             <tbody>
         {% endif %}
         <tr>
-            <td>Field {{ match.field_number }}</td>
+            <td>Campo {{ match.field_number }}</td>
             <td><strong>{{ match.team1 }}</strong> vs <strong>{{ match.team2 }}</strong></td>
             <td>{{ match.referee }}</td>
         </tr>
@@ -55,12 +55,12 @@
     </tbody></table>
     {% endif %}
 
-    <h4>Fairness Stats</h4>
+    <h4>Statistiche</h4>
     <table>
         <thead><tr>
-            <th>Team</th>
-            <th>Matches Played</th>
-            <th>Referee Duties</th>
+            <th>Squadra</th>
+            <th>Partite Giocate</th>
+            <th>Arbitraggi</th>
         </tr></thead>
         <tbody>
         {% for team, stat in schedule.stats.items() %}

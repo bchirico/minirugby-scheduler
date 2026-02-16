@@ -32,7 +32,7 @@ def _resolve_team_names(request: ScheduleRequest) -> list[str]:
     n = request.num_teams
     if request.team_names and len(request.team_names) == n:
         return request.team_names
-    return [f"Team {i + 1}" for i in range(n)]
+    return [f"Squadra {i + 1}" for i in range(n)]
 
 
 def _ordered_pairs(n: int) -> list[tuple[int, int]]:
@@ -114,7 +114,7 @@ def _fill_slots(
 
         if not current_slot:
             warnings.append(
-                "Could not schedule all matches. Some matches may be missing."
+                "Non è stato possibile programmare tutte le partite. Alcune partite potrebbero mancare."
             )
             break
 
@@ -144,7 +144,7 @@ def _check_early_start(
     never_played = [team_names[t] for t in range(n) if first_play_slot[t] is None]
     if never_played:
         warnings.append(
-            f"Teams not playing in first 2 slots: {', '.join(never_played)}"
+            f"Squadre che non giocano nei primi 2 slot: {', '.join(never_played)}"
         )
 
     late_starters = [
@@ -153,7 +153,9 @@ def _check_early_start(
         if first_play_slot[t] is not None and first_play_slot[t] > 1
     ]
     if late_starters:
-        warnings.append(f"Teams starting after slot 2: {', '.join(late_starters)}")
+        warnings.append(
+            f"Squadre che iniziano dopo lo slot 2: {', '.join(late_starters)}"
+        )
 
     return warnings
 

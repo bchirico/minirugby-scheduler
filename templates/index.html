@@ -14,12 +14,12 @@
         <summary>
             <label>
                 <input type="checkbox" name="{{ cat }}_enabled" value="1" {% if loop.first %}checked{% endif %}>
-                {{ cat }} ({{ config.match_duration }} min + {{ config.break_duration }} min break)
+                {{ cat }} ({{ config.match_duration }} min + {{ config.break_duration }} min pausa)
             </label>
         </summary>
         <div class="grid">
             <label>
-                Number of teams
+                Numero di squadre
                 <select name="{{ cat }}_num_teams" class="team-count-select" data-category="{{ cat }}">
                     {% for n in range(3, 9) %}
                     <option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }}</option>
@@ -27,7 +27,7 @@
                 </select>
             </label>
             <label>
-                Number of fields
+                Numero di campi
                 <select name="{{ cat }}_num_fields">
                     {% for n in range(1, 5) %}
                     <option value="{{ n }}" {% if n == 2 %}selected{% endif %}>{{ n }}</option>
@@ -35,7 +35,7 @@
                 </select>
             </label>
             <label>
-                Start time
+                Orario di inizio
                 <input type="time" name="{{ cat }}_start_time" value="09:00">
             </label>
         </div>
@@ -44,10 +44,10 @@
             Arbitri dedicati (la squadra che arbitra non gioca)
         </label>
         <fieldset id="{{ cat }}_team_names">
-            <legend>Team names (optional)</legend>
+            <legend>Nomi squadre (opzionale)</legend>
             <div class="grid" id="{{ cat }}_names_grid">
                 {% for i in range(1, 9) %}
-                <input type="text" name="{{ cat }}_team_{{ i }}" placeholder="Team {{ i }}"
+                <input type="text" name="{{ cat }}_team_{{ i }}" placeholder="Squadra {{ i }}"
                        class="{{ cat }}-team-input" {% if i > 6 %}style="display:none"{% endif %}>
                 {% endfor %}
             </div>
@@ -55,7 +55,7 @@
     </details>
     {% endfor %}
 
-    <button type="submit">Generate All Schedules</button>
+    <button type="submit">Genera Calendari</button>
 </form>
 {% endblock %}
 

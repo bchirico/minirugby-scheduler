@@ -64,7 +64,7 @@ def schedule():
             "index.html",
             categories=CATEGORIES,
             category_order=CATEGORY_ORDER,
-            error="Please enable at least one category.",
+            error="Seleziona almeno una categoria.",
         )
     return render_template(
         "schedule.html",

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="it" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mini-Rugby Tournament Scheduler{% endblock %}</title>
+    <title>{% block title %}Calendario Torneo Mini-Rugby{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <main class="container">
-        <h1>Rugby Tournament Scheduler</h1>
+        <h1>Calendario Torneo Rugby</h1>
         {% block content %}{% endblock %}
     </main>
     {% block scripts %}{% endblock %}
