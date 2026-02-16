@@ -28,48 +28,37 @@ def round_robin_order(n: int) -> list[list[tuple[int, int]]]:
     return rounds
 
 
-def generate_schedule(request: ScheduleRequest) -> Schedule:
+def _resolve_team_names(request: ScheduleRequest) -> list[str]:
     n = request.num_teams
-    num_fields = request.num_fields
-    config = request.get_config()
-
-    # Default team names
     if request.team_names and len(request.team_names) == n:
-        team_names = request.team_names
-    else:
-        team_names = [f"Team {i + 1}" for i in range(n)]
+        return request.team_names
+    return [f"Team {i + 1}" for i in range(n)]
 
-    # All pairs to schedule
-    all_pairs = list(combinations(range(n), 2))
 
-    # Max simultaneous matches per slot: limited by fields and need for 3 teams per match
-    max_simultaneous = min(num_fields, n // 3)
-    if max_simultaneous < 1:
-        max_simultaneous = 1
-
-    # Get round-robin ordered pairs for better distribution
+def _ordered_pairs(n: int) -> list[tuple[int, int]]:
+    all_pairs = set(combinations(range(n), 2))
     rounds = round_robin_order(n)
-    ordered_pairs = []
-    for r in rounds:
-        for pair in r:
-            ordered_pairs.append(pair)
+    ordered = [pair for r in rounds for pair in r]
+    assert set(ordered) == all_pairs
+    return ordered
 
-    # Verify all pairs are covered
-    assert set(ordered_pairs) == set(all_pairs)
 
-    # Greedy slot filling
+def _fill_slots(
+    n: int,
+    ordered_pairs: list[tuple[int, int]],
+    max_simultaneous: int,
+    dedicated_referees: bool = True,
+) -> tuple[list[list[tuple[int, int, int, int]]], dict[int, int], list[str]]:
     unscheduled = list(ordered_pairs)
-    slots: list[list[tuple[int, int, int, int]]] = []  # (t1, t2, ref, field)
+    slots: list[list[tuple[int, int, int, int]]] = []
     referee_counts = {i: 0 for i in range(n)}
-    has_played = set()  # teams that have played at least once
-    warnings = []
+    has_played: set[int] = set()
+    warnings: list[str] = []
 
     while unscheduled:
-        current_slot = []
-        busy_teams: set[int] = set()
         slot_index = len(slots)
+        playing_teams: set[int] = set()
 
-        # For early-start: prioritize pairs with teams that haven't played yet
         if slot_index < 2:
             unscheduled.sort(
                 key=lambda p: (
@@ -78,36 +67,52 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
                 )
             )
 
-        scheduled_this_slot = []
+        # Phase 1: schedule matches (playing pairs only)
+        scheduled_this_slot: list[tuple[int, int]] = []
         for pair in unscheduled:
-            if len(current_slot) >= max_simultaneous:
+            if len(scheduled_this_slot) >= max_simultaneous:
                 break
-
             t1, t2 = pair
-            if t1 in busy_teams or t2 in busy_teams:
+            if t1 in playing_teams or t2 in playing_teams:
                 continue
-
-            # Find best referee
-            candidates = [
-                t for t in range(n) if t not in busy_teams and t != t1 and t != t2
-            ]
-            if not candidates:
-                continue
-
-            referee = min(candidates, key=lambda t: referee_counts[t])
-            field_num = len(current_slot) + 1
-
-            current_slot.append((t1, t2, referee, field_num))
-            busy_teams.update({t1, t2, referee})
-            has_played.update({t1, t2})
-            referee_counts[referee] += 1
             scheduled_this_slot.append(pair)
+            playing_teams.update({t1, t2})
 
-        for pair in scheduled_this_slot:
-            unscheduled.remove(pair)
+        # Phase 2: assign referees
+        current_slot: list[tuple[int, int, int, int]] = []
+        refereeing_teams: set[int] = set()
+        for t1, t2 in scheduled_this_slot:
+            # Prefer resting teams (not playing, not already refereeing)
+            resting = [
+                t
+                for t in range(n)
+                if t not in playing_teams
+                and t not in refereeing_teams
+                and t != t1
+                and t != t2
+            ]
+            if resting:
+                referee = min(resting, key=lambda t: referee_counts[t])
+            elif not dedicated_referees:
+                # One of the two playing teams referees their own match
+                own_candidates = [t for t in (t1, t2) if t not in refereeing_teams]
+                if own_candidates:
+                    referee = min(own_candidates, key=lambda t: referee_counts[t])
+                else:
+                    continue
+            else:
+                continue
+
+            field_num = len(current_slot) + 1
+            current_slot.append((t1, t2, referee, field_num))
+            refereeing_teams.add(referee)
+            referee_counts[referee] += 1
+            has_played.update({t1, t2})
+
+        for t1, t2, _, _ in current_slot:
+            unscheduled.remove((t1, t2))
 
         if not current_slot:
-            # Safety: avoid infinite loop if something goes wrong
             warnings.append(
                 "Could not schedule all matches. Some matches may be missing."
             )
@@ -115,20 +120,32 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
 
         slots.append(current_slot)
 
-    # Check early-start constraint
-    teams_not_played_by_slot2 = set(range(n)) - has_played
-    if teams_not_played_by_slot2:
-        names = [team_names[t] for t in teams_not_played_by_slot2]
-        warnings.append(f"Teams not playing in first 2 slots: {', '.join(names)}")
+    # Push partial slots to the end so full slots come first
+    slots.sort(key=lambda s: len(s), reverse=True)
 
-    # More precise early-start check: look at actual slot assignments
-    first_play_slot = {i: None for i in range(n)}
+    return slots, referee_counts, warnings
+
+
+def _check_early_start(
+    n: int,
+    team_names: list[str],
+    slots: list[list[tuple[int, int, int, int]]],
+) -> list[str]:
+    warnings = []
+
+    first_play_slot: dict[int, int | None] = {i: None for i in range(n)}
     for slot_idx, slot in enumerate(slots):
         for t1, t2, _ref, _field in slot:
             if first_play_slot[t1] is None:
                 first_play_slot[t1] = slot_idx
             if first_play_slot[t2] is None:
                 first_play_slot[t2] = slot_idx
+
+    never_played = [team_names[t] for t in range(n) if first_play_slot[t] is None]
+    if never_played:
+        warnings.append(
+            f"Teams not playing in first 2 slots: {', '.join(never_played)}"
+        )
 
     late_starters = [
         team_names[t]
@@ -138,13 +155,21 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     if late_starters:
         warnings.append(f"Teams starting after slot 2: {', '.join(late_starters)}")
 
-    # Build Match objects with times
-    base_time = datetime.strptime(request.start_time, "%H:%M")
+    return warnings
+
+
+def _build_matches(
+    slots: list[list[tuple[int, int, int, int]]],
+    team_names: list[str],
+    start_time: str,
+    slot_duration: int,
+) -> list[Match]:
+    base_time = datetime.strptime(start_time, "%H:%M")
     matches = []
     match_num = 1
 
     for slot_idx, slot in enumerate(slots):
-        slot_time = base_time + timedelta(minutes=slot_idx * config.slot_duration)
+        slot_time = base_time + timedelta(minutes=slot_idx * slot_duration)
         time_str = slot_time.strftime("%H:%M")
 
         for t1, t2, ref, field_num in slot:
@@ -161,13 +186,39 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
             )
             match_num += 1
 
-    # Compute stats
+    return matches
+
+
+def _compute_stats(
+    n: int, team_names: list[str], matches: list[Match], referee_counts: dict[int, int]
+) -> dict:
     stats = {}
     for i in range(n):
         name = team_names[i]
         played = sum(1 for m in matches if m.team1 == name or m.team2 == name)
-        refereed = referee_counts[i]
-        stats[name] = {"played": played, "refereed": refereed}
+        stats[name] = {"played": played, "refereed": referee_counts[i]}
+    return stats
+
+
+def generate_schedule(request: ScheduleRequest) -> Schedule:
+    n = request.num_teams
+    config = request.get_config()
+    team_names = _resolve_team_names(request)
+
+    if request.dedicated_referees:
+        max_simultaneous = max(1, min(request.num_fields, n // 3))
+    else:
+        max_simultaneous = max(1, min(request.num_fields, n // 2))
+    ordered_pairs = _ordered_pairs(n)
+
+    slots, referee_counts, warnings = _fill_slots(
+        n, ordered_pairs, max_simultaneous, request.dedicated_referees
+    )
+    warnings += _check_early_start(n, team_names, slots)
+    matches = _build_matches(
+        slots, team_names, request.start_time, config.slot_duration
+    )
+    stats = _compute_stats(n, team_names, matches, referee_counts)
 
     return Schedule(
         category=request.category,
@@ -204,14 +255,14 @@ if __name__ == "__main__":
                     assert pair not in pairs, f"Duplicate: {pair}"
                     pairs.add(pair)
 
-                # Verify no time conflicts
+                # Verify no playing conflicts (a team can't play two matches at once)
                 for slot_idx in range(max(m.time_slot for m in sched.matches) + 1):
                     slot_matches = [m for m in sched.matches if m.time_slot == slot_idx]
-                    teams_in_slot = []
+                    players_in_slot = []
                     for m in slot_matches:
-                        teams_in_slot.extend([m.team1, m.team2, m.referee])
-                    assert len(teams_in_slot) == len(set(teams_in_slot)), (
-                        f"Time conflict in {category} {num_teams}t {num_fields}f slot {slot_idx}"
+                        players_in_slot.extend([m.team1, m.team2])
+                    assert len(players_in_slot) == len(set(players_in_slot)), (
+                        f"Playing conflict in {category} {num_teams}t {num_fields}f slot {slot_idx}"
                     )
 
                 status = "OK"

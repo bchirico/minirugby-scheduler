@@ -1,6 +1,17 @@
+from itertools import combinations
+
 import pytest
-from models import CATEGORIES, ScheduleRequest
-from scheduler import generate_schedule, round_robin_order
+from models import CATEGORIES, Match, ScheduleRequest
+from scheduler import (
+    _build_matches,
+    _check_early_start,
+    _compute_stats,
+    _fill_slots,
+    _ordered_pairs,
+    _resolve_team_names,
+    generate_schedule,
+    round_robin_order,
+)
 
 
 class TestRoundRobinOrder:
@@ -64,12 +75,35 @@ class TestGenerateSchedule:
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
     @pytest.mark.parametrize("num_teams", range(3, 9))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
-    def test_no_time_conflicts(self, category, num_teams, num_fields):
+    def test_no_playing_conflicts(self, category, num_teams, num_fields):
         req = ScheduleRequest(
             category=category,
             num_teams=num_teams,
             num_fields=num_fields,
             start_time="09:00",
+        )
+        sched = generate_schedule(req)
+        slots = {}
+        for m in sched.matches:
+            slots.setdefault(m.time_slot, []).append(m)
+        for slot_idx, slot_matches in slots.items():
+            players = []
+            for m in slot_matches:
+                players.extend([m.team1, m.team2])
+            assert len(players) == len(set(players)), (
+                f"Playing conflict in slot {slot_idx}"
+            )
+
+    @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
+    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_fields", [1, 2, 3])
+    def test_no_time_conflicts_dedicated(self, category, num_teams, num_fields):
+        req = ScheduleRequest(
+            category=category,
+            num_teams=num_teams,
+            num_fields=num_fields,
+            start_time="09:00",
+            dedicated_referees=True,
         )
         sched = generate_schedule(req)
         slots = {}
@@ -84,12 +118,13 @@ class TestGenerateSchedule:
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
     @pytest.mark.parametrize("num_teams", range(3, 9))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
-    def test_referee_not_playing(self, category, num_teams, num_fields):
+    def test_referee_not_playing_dedicated(self, category, num_teams, num_fields):
         req = ScheduleRequest(
             category=category,
             num_teams=num_teams,
             num_fields=num_fields,
             start_time="09:00",
+            dedicated_referees=True,
         )
         sched = generate_schedule(req)
         for m in sched.matches:
@@ -187,6 +222,200 @@ class TestGenerateSchedule:
         )
         sched = generate_schedule(req)
         assert not any("starting after slot 2" in w for w in sched.warnings)
+
+    def test_non_dedicated_uses_fewer_slots(self):
+        req_ded = ScheduleRequest(
+            category="U10",
+            num_teams=6,
+            num_fields=3,
+            start_time="09:00",
+            dedicated_referees=True,
+        )
+        req_non = ScheduleRequest(
+            category="U10",
+            num_teams=6,
+            num_fields=3,
+            start_time="09:00",
+            dedicated_referees=False,
+        )
+        sched_ded = generate_schedule(req_ded)
+        sched_non = generate_schedule(req_non)
+        slots_ded = len(set(m.time_slot for m in sched_ded.matches))
+        slots_non = len(set(m.time_slot for m in sched_non.matches))
+        assert slots_non < slots_ded
+
+
+class TestResolveTeamNames:
+    def test_uses_custom_names_when_correct_length(self):
+        req = ScheduleRequest(
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            team_names=["A", "B", "C"],
+        )
+        assert _resolve_team_names(req) == ["A", "B", "C"]
+
+    def test_falls_back_to_defaults_when_wrong_length(self):
+        req = ScheduleRequest(
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            team_names=["A", "B"],
+        )
+        assert _resolve_team_names(req) == ["Team 1", "Team 2", "Team 3"]
+
+    def test_falls_back_to_defaults_when_empty(self):
+        req = ScheduleRequest(
+            category="U8", num_teams=3, num_fields=1, start_time="09:00"
+        )
+        assert _resolve_team_names(req) == ["Team 1", "Team 2", "Team 3"]
+
+
+class TestOrderedPairs:
+    def test_covers_all_pairs(self):
+        for n in range(3, 9):
+            pairs = _ordered_pairs(n)
+            assert set(pairs) == set(combinations(range(n), 2))
+
+    def test_preserves_round_robin_order(self):
+        pairs = _ordered_pairs(4)
+        rounds = round_robin_order(4)
+        expected = [pair for r in rounds for pair in r]
+        assert pairs == expected
+
+
+class TestFillSlots:
+    def test_schedules_all_pairs(self):
+        pairs = _ordered_pairs(4)
+        slots, _, warnings = _fill_slots(
+            4, pairs, max_simultaneous=1, dedicated_referees=True
+        )
+        scheduled = [(t1, t2) for slot in slots for t1, t2, _, _ in slot]
+        assert set(scheduled) == set(pairs)
+        assert not warnings
+
+    def test_respects_max_simultaneous(self):
+        pairs = _ordered_pairs(6)
+        slots, _, _ = _fill_slots(6, pairs, max_simultaneous=2, dedicated_referees=True)
+        for slot in slots:
+            assert len(slot) <= 2
+
+    def test_no_team_appears_twice_in_slot_dedicated(self):
+        pairs = _ordered_pairs(6)
+        slots, _, _ = _fill_slots(6, pairs, max_simultaneous=2, dedicated_referees=True)
+        for slot in slots:
+            teams = []
+            for t1, t2, ref, _ in slot:
+                teams.extend([t1, t2, ref])
+            assert len(teams) == len(set(teams))
+
+    def test_referee_counts_balanced(self):
+        pairs = _ordered_pairs(6)
+        _, referee_counts, _ = _fill_slots(
+            6, pairs, max_simultaneous=2, dedicated_referees=True
+        )
+        counts = list(referee_counts.values())
+        assert max(counts) - min(counts) <= 1
+
+    def test_non_dedicated_allows_more_simultaneous(self):
+        pairs = _ordered_pairs(6)
+        slots, _, warnings = _fill_slots(
+            6, pairs, max_simultaneous=3, dedicated_referees=False
+        )
+        assert not warnings
+        assert any(len(slot) == 3 for slot in slots)
+
+    def test_non_dedicated_own_team_referee_fallback(self):
+        """With 4 teams and 2 fields, all play and all referee — one must ref own match."""
+        pairs = _ordered_pairs(4)
+        slots, _, warnings = _fill_slots(
+            4, pairs, max_simultaneous=2, dedicated_referees=False
+        )
+        assert not warnings
+        scheduled = [(t1, t2) for slot in slots for t1, t2, _, _ in slot]
+        assert set(scheduled) == set(pairs)
+
+    def test_partial_slots_at_end(self):
+        """Slots should be ordered by size descending — partial slots last."""
+        pairs = _ordered_pairs(8)
+        slots, _, _ = _fill_slots(
+            8, pairs, max_simultaneous=3, dedicated_referees=False
+        )
+        sizes = [len(s) for s in slots]
+        assert sizes == sorted(sizes, reverse=True)
+
+    def test_non_dedicated_no_playing_conflict(self):
+        pairs = _ordered_pairs(6)
+        slots, _, _ = _fill_slots(
+            6, pairs, max_simultaneous=3, dedicated_referees=False
+        )
+        for slot in slots:
+            players = []
+            for t1, t2, _, _ in slot:
+                players.extend([t1, t2])
+            assert len(players) == len(set(players))
+
+
+class TestCheckEarlyStart:
+    def test_no_warnings_when_all_play_early(self):
+        # 3 teams, 1 match per slot: everyone plays by slot 1
+        slots = [
+            [(0, 1, 2, 1)],
+            [(0, 2, 1, 1)],
+            [(1, 2, 0, 1)],
+        ]
+        warnings = _check_early_start(3, ["A", "B", "C"], slots)
+        assert not warnings
+
+    def test_warns_on_late_starter(self):
+        # Team 2 doesn't play until slot 2 (0-indexed)
+        slots = [
+            [(0, 1, 2, 1)],
+            [(0, 1, 2, 1)],
+            [(0, 2, 1, 1)],
+        ]
+        warnings = _check_early_start(3, ["A", "B", "C"], slots)
+        assert any("starting after slot 2" in w for w in warnings)
+
+
+class TestBuildMatches:
+    def test_assigns_correct_times(self):
+        slots = [
+            [(0, 1, 2, 1)],
+            [(0, 2, 1, 1)],
+        ]
+        matches = _build_matches(slots, ["A", "B", "C"], "09:00", 15)
+        assert matches[0].start_time == "09:00"
+        assert matches[1].start_time == "09:15"
+
+    def test_assigns_team_names(self):
+        slots = [[(0, 1, 2, 1)]]
+        matches = _build_matches(slots, ["A", "B", "C"], "09:00", 15)
+        assert matches[0].team1 == "A"
+        assert matches[0].team2 == "B"
+        assert matches[0].referee == "C"
+
+    def test_match_numbers_sequential(self):
+        slots = [[(0, 1, 2, 1), (3, 4, 5, 2)], [(0, 2, 1, 1)]]
+        names = ["A", "B", "C", "D", "E", "F"]
+        matches = _build_matches(slots, names, "09:00", 15)
+        assert [m.match_number for m in matches] == [1, 2, 3]
+
+
+class TestComputeStats:
+    def test_counts_played_and_refereed(self):
+        matches = [
+            Match(1, "A", "B", "C", 1, 0, "09:00"),
+            Match(2, "A", "C", "B", 1, 1, "09:15"),
+            Match(3, "B", "C", "A", 1, 2, "09:30"),
+        ]
+        referee_counts = {0: 1, 1: 1, 2: 1}
+        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts)
+        for name in ["A", "B", "C"]:
+            assert stats[name]["played"] == 2
+            assert stats[name]["refereed"] == 1
 
 
 class TestModels:

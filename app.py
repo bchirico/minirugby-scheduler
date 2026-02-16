@@ -23,6 +23,8 @@ def parse_form(form) -> list[ScheduleRequest]:
         num_fields = int(form.get(f"{cat}_num_fields", 1))
         start_time = form.get(f"{cat}_start_time", "09:00")
 
+        dedicated_referees = bool(form.get(f"{cat}_dedicated_referees"))
+
         team_names = []
         for i in range(1, num_teams + 1):
             name = form.get(f"{cat}_team_{i}", "").strip()
@@ -36,6 +38,7 @@ def parse_form(form) -> list[ScheduleRequest]:
                 num_fields=num_fields,
                 start_time=start_time,
                 team_names=team_names if len(team_names) == num_teams else [],
+                dedicated_referees=dedicated_referees,
             )
         )
     return requests

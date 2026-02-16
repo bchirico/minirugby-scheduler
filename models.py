@@ -66,6 +66,7 @@ class ScheduleRequest:
     num_fields: int
     start_time: str  # "HH:MM"
     team_names: list[str] = field(default_factory=list)
+    dedicated_referees: bool = False
 
     def get_config(self) -> CategoryConfig:
         return CATEGORIES[self.category]
