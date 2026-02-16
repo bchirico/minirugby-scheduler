@@ -2,9 +2,9 @@
 
 {% block content %}
 {% if error %}
-<article style="border-left: 4px solid var(--pico-color-red-500); padding: 1rem;">
+<div style="background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; border-left: 4px solid #dc3545; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
     {{ error }}
-</article>
+</div>
 {% endif %}
 
 <form method="post" action="/schedule" id="mainForm">

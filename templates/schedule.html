@@ -22,7 +22,7 @@
     </header>
 
     {% if schedule.warnings %}
-    <div style="background: var(--pico-color-amber-100); padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem;">
+    <div style="background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
         {% for w in schedule.warnings %}
         <p><strong>Nota:</strong> {{ w }}</p>
         {% endfor %}
