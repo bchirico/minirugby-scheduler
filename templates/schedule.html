@@ -61,6 +61,7 @@
             <th>Squadra</th>
             <th>Partite Giocate</th>
             <th>Arbitraggi</th>
+            <th>Max Attesa</th>
         </tr></thead>
         <tbody>
         {% for team, stat in schedule.stats.items() %}
@@ -68,6 +69,7 @@
             <td>{{ team }}</td>
             <td>{{ stat.played }}</td>
             <td>{{ stat.refereed }}</td>
+            <td>{{ stat.max_wait }} min</td>
         </tr>
         {% endfor %}
         </tbody>
