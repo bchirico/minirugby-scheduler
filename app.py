@@ -48,17 +48,27 @@ def generate_all(form) -> list[Schedule]:
 
 @app.route("/")
 def index():
-    return render_template("index.html", categories=CATEGORIES, category_order=CATEGORY_ORDER)
+    return render_template(
+        "index.html", categories=CATEGORIES, category_order=CATEGORY_ORDER
+    )
 
 
 @app.route("/schedule", methods=["POST"])
 def schedule():
     schedules = generate_all(request.form)
     if not schedules:
-        return render_template("index.html", categories=CATEGORIES, category_order=CATEGORY_ORDER,
-                               error="Please enable at least one category.")
-    return render_template("schedule.html", schedules=schedules, categories=CATEGORIES,
-                           form_data=request.form)
+        return render_template(
+            "index.html",
+            categories=CATEGORIES,
+            category_order=CATEGORY_ORDER,
+            error="Please enable at least one category.",
+        )
+    return render_template(
+        "schedule.html",
+        schedules=schedules,
+        categories=CATEGORIES,
+        form_data=request.form,
+    )
 
 
 @app.route("/download/pdf", methods=["POST"])

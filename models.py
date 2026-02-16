@@ -18,15 +18,33 @@ class CategoryConfig:
 
 
 CATEGORIES = {
-    "U8": CategoryConfig("U8", match_duration=10, break_duration=5,
-                          field_width="17-20m", field_length="45m",
-                          field_width_max=20, field_length_max=45),
-    "U10": CategoryConfig("U10", match_duration=10, break_duration=5,
-                           field_width="30m", field_length="60-70m",
-                           field_width_max=30, field_length_max=70),
-    "U12": CategoryConfig("U12", match_duration=12, break_duration=5,
-                           field_width="40-45m", field_length="55-70m",
-                           field_width_max=45, field_length_max=70),
+    "U8": CategoryConfig(
+        "U8",
+        match_duration=10,
+        break_duration=5,
+        field_width="17-20m",
+        field_length="45m",
+        field_width_max=20,
+        field_length_max=45,
+    ),
+    "U10": CategoryConfig(
+        "U10",
+        match_duration=10,
+        break_duration=5,
+        field_width="30m",
+        field_length="60-70m",
+        field_width_max=30,
+        field_length_max=70,
+    ),
+    "U12": CategoryConfig(
+        "U12",
+        match_duration=12,
+        break_duration=5,
+        field_width="40-45m",
+        field_length="55-70m",
+        field_width_max=45,
+        field_length_max=70,
+    ),
 }
 
 

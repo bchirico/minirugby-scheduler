@@ -90,9 +90,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
 
             # Find best referee
             candidates = [
-                t
-                for t in range(n)
-                if t not in busy_teams and t != t1 and t != t2
+                t for t in range(n) if t not in busy_teams and t != t1 and t != t2
             ]
             if not candidates:
                 continue
@@ -111,7 +109,9 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
 
         if not current_slot:
             # Safety: avoid infinite loop if something goes wrong
-            warnings.append("Could not schedule all matches. Some matches may be missing.")
+            warnings.append(
+                "Could not schedule all matches. Some matches may be missing."
+            )
             break
 
         slots.append(current_slot)
@@ -120,9 +120,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     teams_not_played_by_slot2 = set(range(n)) - has_played
     if teams_not_played_by_slot2:
         names = [team_names[t] for t in teams_not_played_by_slot2]
-        warnings.append(
-            f"Teams not playing in first 2 slots: {', '.join(names)}"
-        )
+        warnings.append(f"Teams not playing in first 2 slots: {', '.join(names)}")
 
     # More precise early-start check: look at actual slot assignments
     first_play_slot = {i: None for i in range(n)}
@@ -139,9 +137,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         if first_play_slot[t] is not None and first_play_slot[t] > 1
     ]
     if late_starters:
-        warnings.append(
-            f"Teams starting after slot 2: {', '.join(late_starters)}"
-        )
+        warnings.append(f"Teams starting after slot 2: {', '.join(late_starters)}")
 
     # Build Match objects with times
     base_time = datetime.strptime(request.start_time, "%H:%M")
@@ -170,11 +166,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     stats = {}
     for i in range(n):
         name = team_names[i]
-        played = sum(
-            1
-            for m in matches
-            if m.team1 == name or m.team2 == name
-        )
+        played = sum(1 for m in matches if m.team1 == name or m.team2 == name)
         refereed = referee_counts[i]
         stats[name] = {"played": played, "refereed": refereed}
 
@@ -246,9 +238,7 @@ if __name__ == "__main__":
         if m.time_slot != current_slot:
             current_slot = m.time_slot
             print(f"\nSlot {current_slot} - {m.start_time}")
-        print(
-            f"  Field {m.field_number}: {m.team1} vs {m.team2} (ref: {m.referee})"
-        )
+        print(f"  Field {m.field_number}: {m.team1} vs {m.team2} (ref: {m.referee})")
     print("\nStats:")
     for team, s in sched.stats.items():
         print(f"  {team}: {s['played']} played, {s['refereed']} refereed")

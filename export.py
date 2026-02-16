@@ -20,10 +20,12 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.cell(0, 12, f"{sched.category} Schedule", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 10)
         pdf.cell(
-            0, 6,
+            0,
+            6,
             f"{len(sched.stats)} teams | {len(sched.matches)} matches | "
             f"{config.match_duration} min + {config.break_duration} min break",
-            new_x="LMARGIN", new_y="NEXT",
+            new_x="LMARGIN",
+            new_y="NEXT",
         )
         pdf.ln(4)
 
@@ -52,7 +54,15 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
                 if current_slot > 0:
                     # Light separator between slots
                     pdf.set_fill_color(245, 245, 245)
-                    pdf.cell(sum(col_widths), 2, "", border=0, fill=True, new_x="LMARGIN", new_y="NEXT")
+                    pdf.cell(
+                        sum(col_widths),
+                        2,
+                        "",
+                        border=0,
+                        fill=True,
+                        new_x="LMARGIN",
+                        new_y="NEXT",
+                    )
 
             pdf.cell(col_widths[0], 7, str(m.match_number), border=1)
             pdf.cell(col_widths[1], 7, m.start_time, border=1)
@@ -120,12 +130,22 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         # Meta (in-goal) areas — dashed lines
         pdf.set_draw_color(255, 255, 255)
         pdf.set_line_width(0.3)
-        pdf.dashed_line(field_x + meta_mm, field_y,
-                        field_x + meta_mm, field_y + draw_h,
-                        dash_length=2, space_length=1.5)
-        pdf.dashed_line(field_x + draw_w - meta_mm, field_y,
-                        field_x + draw_w - meta_mm, field_y + draw_h,
-                        dash_length=2, space_length=1.5)
+        pdf.dashed_line(
+            field_x + meta_mm,
+            field_y,
+            field_x + meta_mm,
+            field_y + draw_h,
+            dash_length=2,
+            space_length=1.5,
+        )
+        pdf.dashed_line(
+            field_x + draw_w - meta_mm,
+            field_y,
+            field_x + draw_w - meta_mm,
+            field_y + draw_h,
+            dash_length=2,
+            space_length=1.5,
+        )
 
         # Meta labels (white on green)
         pdf.set_text_color(255, 255, 255)
@@ -159,7 +179,9 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
     wb.remove(wb.active)  # remove default sheet
 
     header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+    header_fill = PatternFill(
+        start_color="DDDDDD", end_color="DDDDDD", fill_type="solid"
+    )
 
     for sched in schedules:
         ws = wb.create_sheet(title=sched.category)
@@ -172,14 +194,16 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
             cell.fill = header_fill
 
         for m in sched.matches:
-            ws.append([
-                m.match_number,
-                m.start_time,
-                f"Field {m.field_number}",
-                m.team1,
-                m.team2,
-                m.referee,
-            ])
+            ws.append(
+                [
+                    m.match_number,
+                    m.start_time,
+                    f"Field {m.field_number}",
+                    m.team1,
+                    m.team2,
+                    m.referee,
+                ]
+            )
 
         # Blank row then stats
         ws.append([])
