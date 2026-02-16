@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render deploy
-        run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        run: curl -s --max-time 30 "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
