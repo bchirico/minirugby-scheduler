@@ -6,6 +6,11 @@ class CategoryConfig:
     name: str  # "U8", "U10", "U12"
     match_duration: int  # minutes
     break_duration: int  # minutes
+    field_width: str  # e.g. "17-20m"
+    field_length: str  # e.g. "45m"
+    field_width_max: int  # max width in meters (for drawing scale)
+    field_length_max: int  # max length in meters (for drawing scale)
+    meta: int = 5  # in-goal area in meters
 
     @property
     def slot_duration(self) -> int:
@@ -13,9 +18,15 @@ class CategoryConfig:
 
 
 CATEGORIES = {
-    "U8": CategoryConfig("U8", match_duration=10, break_duration=5),
-    "U10": CategoryConfig("U10", match_duration=10, break_duration=5),
-    "U12": CategoryConfig("U12", match_duration=12, break_duration=5),
+    "U8": CategoryConfig("U8", match_duration=10, break_duration=5,
+                          field_width="17-20m", field_length="45m",
+                          field_width_max=20, field_length_max=45),
+    "U10": CategoryConfig("U10", match_duration=10, break_duration=5,
+                           field_width="30m", field_length="55m",
+                           field_width_max=30, field_length_max=55),
+    "U12": CategoryConfig("U12", match_duration=12, break_duration=5,
+                           field_width="40-45m", field_length="55-70m",
+                           field_width_max=45, field_length_max=70),
 }
 
 
