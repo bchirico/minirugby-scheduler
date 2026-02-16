@@ -1,3 +1,14 @@
+body {
+    background: #f0f0f0;
+}
+
+details {
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    background: white;
+}
+
 details summary {
     cursor: pointer;
 }
@@ -14,7 +25,8 @@ details > fieldset {
 }
 
 details > label {
-    padding-left: 1rem;
+    padding-left: 1.5rem;
+    margin-top: -0.5rem;
 }
 
 article header h2 {
