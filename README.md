@@ -24,6 +24,23 @@ Open http://localhost:5050
 
 For each category, select the number of teams (3–8), fields, start time, and optionally name the teams. The scheduler uses a greedy algorithm with round-robin ordering (circle method) to fill time slots, assign referees fairly, and ensure every team plays as early as possible.
 
+## Deploy to Render
+
+The app is configured for [Render](https://render.com) free tier. Deploys are triggered automatically when a GitHub release is published.
+
+### First-time setup
+
+1. Push the repo to GitHub
+2. Sign up on [render.com](https://render.com) with your GitHub account
+3. Create a **New > Web Service** and connect the repo — Render will auto-detect `render.yaml`
+4. In Render dashboard > your service > **Settings** > set **Auto-Deploy** to **No**
+5. In Render dashboard > your service > **Settings** > copy the **Deploy Hook URL**
+6. In GitHub > repo > **Settings > Secrets and variables > Actions** > add a secret called `RENDER_DEPLOY_HOOK_URL` with the hook URL
+
+### Deploying
+
+Create a release on GitHub — the GitHub Action (`.github/workflows/deploy.yml`) will trigger a Render redeploy automatically.
+
 ## Project structure
 
 ```
