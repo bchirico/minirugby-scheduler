@@ -288,23 +288,18 @@ class TestOrderedPairs:
 
 class TestFillSlots:
     def test_schedules_all_pairs(self):
-        pairs = _ordered_pairs(4)
-        slots, _, warnings = _fill_slots(
-            4, pairs, max_simultaneous=1, dedicated_referees=True
-        )
-        scheduled = [(t1, t2) for slot in slots for t1, t2, _, _ in slot]
-        assert set(scheduled) == set(pairs)
+        slots, _, warnings = _fill_slots(4, max_simultaneous=1, dedicated_referees=True)
+        scheduled = {(t1, t2) for slot in slots for t1, t2, _, _ in slot}
+        assert scheduled == set(combinations(range(4), 2))
         assert not warnings
 
     def test_respects_max_simultaneous(self):
-        pairs = _ordered_pairs(6)
-        slots, _, _ = _fill_slots(6, pairs, max_simultaneous=2, dedicated_referees=True)
+        slots, _, _ = _fill_slots(6, max_simultaneous=2, dedicated_referees=True)
         for slot in slots:
             assert len(slot) <= 2
 
     def test_no_team_appears_twice_in_slot_dedicated(self):
-        pairs = _ordered_pairs(6)
-        slots, _, _ = _fill_slots(6, pairs, max_simultaneous=2, dedicated_referees=True)
+        slots, _, _ = _fill_slots(6, max_simultaneous=2, dedicated_referees=True)
         for slot in slots:
             teams = []
             for t1, t2, ref, _ in slot:
@@ -312,45 +307,42 @@ class TestFillSlots:
             assert len(teams) == len(set(teams))
 
     def test_referee_counts_balanced(self):
-        pairs = _ordered_pairs(6)
         _, referee_counts, _ = _fill_slots(
-            6, pairs, max_simultaneous=2, dedicated_referees=True
+            6, max_simultaneous=2, dedicated_referees=True
         )
         counts = list(referee_counts.values())
         assert max(counts) - min(counts) <= 1
 
     def test_non_dedicated_allows_more_simultaneous(self):
-        pairs = _ordered_pairs(6)
         slots, _, warnings = _fill_slots(
-            6, pairs, max_simultaneous=3, dedicated_referees=False
+            6, max_simultaneous=3, dedicated_referees=False
         )
         assert not warnings
         assert any(len(slot) == 3 for slot in slots)
 
     def test_non_dedicated_own_team_referee_fallback(self):
         """With 4 teams and 2 fields, all play and all referee — one must ref own match."""
-        pairs = _ordered_pairs(4)
         slots, _, warnings = _fill_slots(
-            4, pairs, max_simultaneous=2, dedicated_referees=False
+            4, max_simultaneous=2, dedicated_referees=False
         )
         assert not warnings
-        scheduled = [(t1, t2) for slot in slots for t1, t2, _, _ in slot]
-        assert set(scheduled) == set(pairs)
+        scheduled = {(t1, t2) for slot in slots for t1, t2, _, _ in slot}
+        assert scheduled == set(combinations(range(4), 2))
 
-    def test_partial_slots_at_end(self):
-        """Slots should be ordered by size descending — partial slots last."""
-        pairs = _ordered_pairs(8)
-        slots, _, _ = _fill_slots(
-            8, pairs, max_simultaneous=3, dedicated_referees=False
-        )
+    def test_full_slots_before_partial(self):
+        """Full slots should come before partial slots."""
+        slots, _, _ = _fill_slots(8, max_simultaneous=3, dedicated_referees=False)
         sizes = [len(s) for s in slots]
-        assert sizes == sorted(sizes, reverse=True)
+        # All full slots come before any partial slot
+        full_done = False
+        for s in sizes:
+            if s < 3:
+                full_done = True
+            elif full_done:
+                assert False, f"Full slot after partial: {sizes}"
 
     def test_non_dedicated_no_playing_conflict(self):
-        pairs = _ordered_pairs(6)
-        slots, _, _ = _fill_slots(
-            6, pairs, max_simultaneous=3, dedicated_referees=False
-        )
+        slots, _, _ = _fill_slots(6, max_simultaneous=3, dedicated_referees=False)
         for slot in slots:
             players = []
             for t1, t2, _, _ in slot:
@@ -412,10 +404,25 @@ class TestComputeStats:
             Match(3, "B", "C", "A", 1, 2, "09:30"),
         ]
         referee_counts = {0: 1, 1: 1, 2: 1}
-        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts)
+        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts, 15)
         for name in ["A", "B", "C"]:
             assert stats[name]["played"] == 2
             assert stats[name]["refereed"] == 1
+
+    def test_max_wait(self):
+        matches = [
+            Match(1, "A", "B", "C", 1, 0, "09:00"),
+            Match(2, "A", "C", "B", 1, 1, "09:15"),
+            Match(3, "B", "C", "A", 1, 3, "09:45"),
+        ]
+        referee_counts = {0: 1, 1: 1, 2: 1}
+        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts, 15)
+        # A plays slots 0,1 -> gap 1 -> 15 min
+        assert stats["A"]["max_wait"] == 15
+        # B plays slots 0,3 -> gap 3 -> 45 min
+        assert stats["B"]["max_wait"] == 45
+        # C plays slots 1,3 -> gap 2 -> 30 min
+        assert stats["C"]["max_wait"] == 30
 
 
 class TestModels:

@@ -94,8 +94,8 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
 
-        stat_widths = [40, 22, 23]
-        stat_headers = ["Squadra", "Partite", "Arbitraggi"]
+        stat_widths = [35, 18, 20, 22]
+        stat_headers = ["Squadra", "Partite", "Arbitraggi", "Max Attesa"]
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(220, 220, 220)
         for i, h in enumerate(stat_headers):
@@ -107,6 +107,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
             pdf.cell(stat_widths[0], 6, team, border=1)
             pdf.cell(stat_widths[1], 6, str(stat["played"]), border=1)
             pdf.cell(stat_widths[2], 6, str(stat["refereed"]), border=1)
+            pdf.cell(stat_widths[3], 6, f"{stat['max_wait']} min", border=1)
             pdf.ln()
 
         stats_bottom = pdf.get_y()
@@ -208,14 +209,14 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
         # Blank row then stats
         ws.append([])
         stats_start = ws.max_row + 1
-        ws.append(["Squadra", "Partite Giocate", "Arbitraggi"])
+        ws.append(["Squadra", "Partite Giocate", "Arbitraggi", "Max Attesa (min)"])
         for cell in ws[stats_start]:
             if cell.value:
                 cell.font = header_font
                 cell.fill = header_fill
 
         for team, stat in sched.stats.items():
-            ws.append([team, stat["played"], stat["refereed"]])
+            ws.append([team, stat["played"], stat["refereed"], stat["max_wait"]])
 
         # Auto-width columns
         for col in ws.columns:
