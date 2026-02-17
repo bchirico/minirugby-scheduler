@@ -223,6 +223,50 @@ class TestGenerateSchedule:
         sched = generate_schedule(req)
         assert not any("iniziano dopo lo slot 2" in w for w in sched.warnings)
 
+    def test_time_overrun_warning(self):
+        # 6 teams: each plays 5 matches, 5*10=50 > 40
+        req = ScheduleRequest(
+            category="U8",
+            num_teams=6,
+            num_fields=2,
+            start_time="09:00",
+            total_game_time=40,
+            match_duration=10,
+            break_duration=5,
+        )
+        sched = generate_schedule(req)
+        assert sched.time_overrun_warning is not None
+        assert "supera il limite" in sched.time_overrun_warning
+
+    def test_no_time_overrun_when_within_budget(self):
+        # 3 teams: each plays 2 matches, 2*10=20 <= 45
+        req = ScheduleRequest(
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            total_game_time=45,
+            match_duration=10,
+            break_duration=5,
+        )
+        sched = generate_schedule(req)
+        assert sched.time_overrun_warning is None
+
+    def test_custom_match_duration_used(self):
+        req = ScheduleRequest(
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            match_duration=8,
+            break_duration=4,
+        )
+        sched = generate_schedule(req)
+        # 3 teams, 1 field: 3 matches in 3 slots, slot_duration = 8+4 = 12
+        assert sched.matches[0].start_time == "09:00"
+        assert sched.matches[1].start_time == "09:12"
+        assert sched.matches[2].start_time == "09:24"
+
     def test_non_dedicated_uses_fewer_slots(self):
         req_ded = ScheduleRequest(
             category="U10",

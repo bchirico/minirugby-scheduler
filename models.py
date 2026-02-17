@@ -1,4 +1,18 @@
 from dataclasses import dataclass, field
+from typing import Optional
+
+
+TOTAL_GAME_TIMES = {
+    "U8": {"half": 45, "full": 54},
+    "U10": {"half": 50, "full": 60},
+    "U12": {"half": 60, "full": 70},
+}
+
+RECOMMENDED_MATCH_TIMES = {
+    "U8": 10,
+    "U10": 10,
+    "U12": 12,
+}
 
 
 @dataclass
@@ -65,6 +79,9 @@ class ScheduleRequest:
     num_teams: int
     num_fields: int
     start_time: str  # "HH:MM"
+    total_game_time: int = 0  # total playing minutes budget
+    match_duration: int = 0  # minutes per match
+    break_duration: int = 0  # minutes per break
     team_names: list[str] = field(default_factory=list)
     dedicated_referees: bool = False
 
@@ -78,3 +95,4 @@ class Schedule:
     matches: list[Match]
     warnings: list[str]
     stats: dict  # {team_name: {"played": int, "refereed": int}}
+    time_overrun_warning: Optional[str] = None

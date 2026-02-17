@@ -14,13 +14,17 @@
         <summary>
             <label>
                 <input type="checkbox" name="{{ cat }}_enabled" value="1" {% if loop.first %}checked{% endif %}>
-                {{ cat }} ({{ config.match_duration }} min + {{ config.break_duration }} min pausa)
+                {{ cat }}
             </label>
         </summary>
+        <label>
+            <input type="checkbox" name="{{ cat }}_full_day" value="1" class="full-day-checkbox" data-category="{{ cat }}">
+            Giornata intera
+        </label>
         <div class="grid">
             <label>
                 Numero di squadre
-                <select name="{{ cat }}_num_teams" class="team-count-select" data-category="{{ cat }}">
+                <select name="{{ cat }}_num_teams" class="team-count-select calc-trigger" data-category="{{ cat }}">
                     {% for n in range(3, 9) %}
                     <option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }}</option>
                     {% endfor %}
@@ -39,10 +43,40 @@
                 <input type="time" name="{{ cat }}_start_time" value="09:00">
             </label>
         </div>
-        <label>
-            <input type="checkbox" name="{{ cat }}_dedicated_referees" value="1">
-            Arbitri dedicati (la squadra che arbitra non gioca)
-        </label>
+
+        <div style="background: #e8f4f8; border: 1px solid #bee5eb; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+            <small style="color: #0c5460;">
+                Tempo consigliato per partita: <strong>{{ recommended_match_times[cat] }} min</strong>
+            </small>
+        </div>
+
+        <div class="grid">
+            <label>
+                Tempo totale di gioco (min)
+                <input type="number" name="{{ cat }}_total_game_time" min="1"
+                       value="{{ total_game_times[cat]['half'] }}"
+                       class="calc-trigger" data-category="{{ cat }}"
+                       id="{{ cat }}_total_game_time">
+            </label>
+            <label>
+                Durata partita (min)
+                <input type="number" name="{{ cat }}_match_duration" min="1"
+                       value="{{ config.match_duration }}"
+                       class="duration-input" data-category="{{ cat }}"
+                       id="{{ cat }}_match_duration">
+            </label>
+            <label>
+                Durata pausa (min)
+                <input type="number" name="{{ cat }}_break_duration" min="1"
+                       value="{{ config.break_duration }}"
+                       class="duration-input" data-category="{{ cat }}"
+                       id="{{ cat }}_break_duration">
+            </label>
+        </div>
+
+        <div id="{{ cat }}_time_alert" style="display:none; background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; border-left: 4px solid #dc3545; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: bold;">
+        </div>
+
         <fieldset id="{{ cat }}_team_names">
             <legend>Nomi squadre (opzionale)</legend>
             <div class="grid" id="{{ cat }}_names_grid">
@@ -61,6 +95,68 @@
 
 {% block scripts %}
 <script>
+const TOTAL_GAME_TIMES = {{ total_game_times | tojson }};
+const RECOMMENDED_MATCH_TIMES = {{ recommended_match_times | tojson }};
+const CATEGORIES = {{ category_order | tojson }};
+
+// Auto-calculate match and break durations based on total game time
+function recalculate(cat) {
+    const numTeams = parseInt(document.querySelector(`[name="${cat}_num_teams"]`).value);
+    const totalGameTime = parseInt(document.getElementById(`${cat}_total_game_time`).value);
+
+    const matchesPerTeam = numTeams - 1;
+    const matchDuration = Math.min(RECOMMENDED_MATCH_TIMES[cat], Math.floor(totalGameTime / matchesPerTeam));
+    const breakDuration = Math.max(5, Math.floor(matchDuration / 2));
+
+    document.getElementById(`${cat}_match_duration`).value = matchDuration;
+    document.getElementById(`${cat}_break_duration`).value = breakDuration;
+
+    checkOverrun(cat);
+}
+
+// Check if per-team total play time exceeds the budget
+function checkOverrun(cat) {
+    const numTeams = parseInt(document.querySelector(`[name="${cat}_num_teams"]`).value);
+    const totalGameTime = parseInt(document.getElementById(`${cat}_total_game_time`).value);
+    const matchDuration = parseInt(document.getElementById(`${cat}_match_duration`).value);
+
+    const matchesPerTeam = numTeams - 1;
+    const actualTotal = matchesPerTeam * matchDuration;
+
+    const alertDiv = document.getElementById(`${cat}_time_alert`);
+    if (actualTotal > totalGameTime) {
+        alertDiv.textContent = `Attenzione: il tempo totale di gioco per squadra (${actualTotal} min) supera il limite (${totalGameTime} min)`;
+        alertDiv.style.display = '';
+    } else {
+        alertDiv.style.display = 'none';
+    }
+}
+
+// Per-category full day toggle
+document.querySelectorAll('.full-day-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const cat = this.dataset.category;
+        const dayKey = this.checked ? 'full' : 'half';
+        document.getElementById(`${cat}_total_game_time`).value = TOTAL_GAME_TIMES[cat][dayKey];
+        recalculate(cat);
+    });
+});
+
+// Recalculate on changes to teams, fields, dedicated refs, or total game time
+document.querySelectorAll('.calc-trigger').forEach(el => {
+    el.addEventListener('change', function() {
+        recalculate(this.dataset.category);
+    });
+});
+
+// Check overrun on manual duration changes
+document.querySelectorAll('.duration-input').forEach(el => {
+    el.addEventListener('change', function() {
+        checkOverrun(this.dataset.category);
+    });
+});
+
+// Team name visibility
 document.querySelectorAll('.team-count-select').forEach(select => {
     select.addEventListener('change', function() {
         const cat = this.dataset.category;
@@ -70,5 +166,8 @@ document.querySelectorAll('.team-count-select').forEach(select => {
         });
     });
 });
+
+// Initial calculation for all categories
+CATEGORIES.forEach(cat => recalculate(cat));
 </script>
 {% endblock %}

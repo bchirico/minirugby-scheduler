@@ -2,7 +2,13 @@ from io import BytesIO
 
 from flask import Flask, render_template, request, send_file
 
-from models import CATEGORIES, ScheduleRequest, Schedule
+from models import (
+    CATEGORIES,
+    TOTAL_GAME_TIMES,
+    RECOMMENDED_MATCH_TIMES,
+    ScheduleRequest,
+    Schedule,
+)
 from scheduler import generate_schedule
 from export import schedule_to_pdf, schedule_to_excel
 
@@ -23,7 +29,13 @@ def parse_form(form) -> list[ScheduleRequest]:
         num_fields = int(form.get(f"{cat}_num_fields", 1))
         start_time = form.get(f"{cat}_start_time", "09:00")
 
-        dedicated_referees = bool(form.get(f"{cat}_dedicated_referees"))
+        config = CATEGORIES[cat]
+        is_full_day = bool(form.get(f"{cat}_full_day"))
+        day_key = "full" if is_full_day else "half"
+        default_total = TOTAL_GAME_TIMES[cat][day_key]
+        total_game_time = int(form.get(f"{cat}_total_game_time", default_total))
+        match_duration = int(form.get(f"{cat}_match_duration", config.match_duration))
+        break_duration = int(form.get(f"{cat}_break_duration", config.break_duration))
 
         team_names = []
         for i in range(1, num_teams + 1):
@@ -37,8 +49,10 @@ def parse_form(form) -> list[ScheduleRequest]:
                 num_teams=num_teams,
                 num_fields=num_fields,
                 start_time=start_time,
+                total_game_time=total_game_time,
+                match_duration=match_duration,
+                break_duration=break_duration,
                 team_names=team_names if len(team_names) == num_teams else [],
-                dedicated_referees=dedicated_referees,
             )
         )
     return requests
@@ -52,7 +66,11 @@ def generate_all(form) -> list[Schedule]:
 @app.route("/")
 def index():
     return render_template(
-        "index.html", categories=CATEGORIES, category_order=CATEGORY_ORDER
+        "index.html",
+        categories=CATEGORIES,
+        category_order=CATEGORY_ORDER,
+        total_game_times=TOTAL_GAME_TIMES,
+        recommended_match_times=RECOMMENDED_MATCH_TIMES,
     )
 
 
@@ -64,6 +82,8 @@ def schedule():
             "index.html",
             categories=CATEGORIES,
             category_order=CATEGORY_ORDER,
+            total_game_times=TOTAL_GAME_TIMES,
+            recommended_match_times=RECOMMENDED_MATCH_TIMES,
             error="Seleziona almeno una categoria.",
         )
     return render_template(
