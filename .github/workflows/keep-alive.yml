@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render
-        run: curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_APP_URL }}"
+        run: curl -s --max-time 30 -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_APP_URL }}"
