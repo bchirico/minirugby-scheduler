@@ -21,6 +21,10 @@
             <input type="checkbox" name="{{ cat }}_full_day" value="1" class="full-day-checkbox" data-category="{{ cat }}">
             Giornata intera
         </label>
+        <label>
+            <input type="checkbox" name="{{ cat }}_no_referee" value="1">
+            Non gestire gli arbitraggi
+        </label>
         <div class="grid">
             <label>
                 Numero di squadre
@@ -46,7 +50,11 @@
 
         <div style="background: #e8f4f8; border: 1px solid #bee5eb; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
             <small style="color: #0c5460;">
+                {% if cat == "U6" %}
+                Nel calcolo dei tempi evento considerare: <strong>50% parco sportivo</strong> e <strong>50% gioco di rugby</strong>
+                {% else %}
                 Tempo consigliato per partita: <strong>{{ recommended_match_times[cat] }} min</strong>
+                {% endif %}
             </small>
         </div>
 

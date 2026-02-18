@@ -4,7 +4,7 @@ from fpdf import FPDF
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
-from models import CATEGORIES, Schedule
+from models import CATEGORIES, U6_FIELD_FORMATS, Schedule
 
 
 def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
@@ -36,9 +36,13 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         if sched.warnings:
             pdf.ln(2)
 
-        # Match table
-        col_widths = [20, 25, 55, 55, 35]  # #, Time, Field, Match, Referee
-        headers = ["#", "Orario", "Campo", "Partita", "Arbitro"]
+        # Match table — Arbitro column omitted when no_referee
+        if sched.no_referee:
+            col_widths = [20, 25, 65, 80]  # #, Time, Field, Match
+            headers = ["#", "Orario", "Campo", "Partita"]
+        else:
+            col_widths = [20, 25, 55, 55, 35]  # #, Time, Field, Match, Referee
+            headers = ["#", "Orario", "Campo", "Partita", "Arbitro"]
 
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_fill_color(220, 220, 220)
@@ -83,7 +87,8 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
             pdf.cell(col_widths[1], 7, m.start_time, border=1)
             pdf.cell(col_widths[2], 7, f"Campo {m.field_number}", border=1)
             pdf.cell(col_widths[3], 7, f"{m.team1} vs {m.team2}", border=1)
-            pdf.cell(col_widths[4], 7, m.referee, border=1)
+            if not sched.no_referee:
+                pdf.cell(col_widths[4], 7, m.referee, border=1)
             pdf.ln()
 
         # Riposa row for the last slot
@@ -105,16 +110,14 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.ln(6)
 
         # --- Stats table (left) + Field diagram (right) side by side ---
-        # Layout: stats table takes left ~90mm, field diagram on the right
-        stats_table_w = 95  # total width of stats columns (must match stat_widths sum)
-        gap = 10  # gap between table and diagram
-        draw_w = 80  # fixed field diagram width in mm
+        stats_table_w = 95
+        gap = 10
+        draw_w = 80
         draw_h = draw_w * config.field_width_max / config.field_length_max
         meta_mm = draw_w * config.meta / config.field_length_max
 
-        # Estimate total height needed for this section
         num_teams = len(sched.stats)
-        stats_h = 8 + 8 + num_teams * 7  # title + header + rows
+        stats_h = 8 + 8 + num_teams * 7
         section_h = max(stats_h, draw_h + 20) + 10
         if pdf.get_y() + section_h > pdf.h - pdf.b_margin:
             pdf.add_page()
@@ -125,8 +128,13 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
 
-        stat_widths = [35, 18, 20, 22]
-        stat_headers = ["Squadra", "Partite", "Arbitraggi", "Max Attesa"]
+        if sched.no_referee:
+            stat_widths = [55, 18, 22]
+            stat_headers = ["Squadra", "Partite", "Max Attesa"]
+        else:
+            stat_widths = [35, 18, 20, 22]
+            stat_headers = ["Squadra", "Partite", "Arbitraggi", "Max Attesa"]
+
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(220, 220, 220)
         for i, h in enumerate(stat_headers):
@@ -137,49 +145,42 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         for team, stat in sched.stats.items():
             pdf.cell(stat_widths[0], 6, team, border=1)
             pdf.cell(stat_widths[1], 6, str(stat["played"]), border=1)
-            pdf.cell(stat_widths[2], 6, str(stat["refereed"]), border=1)
-            pdf.cell(stat_widths[3], 6, f"{stat['max_wait']} min", border=1)
+            if not sched.no_referee:
+                pdf.cell(stat_widths[2], 6, str(stat["refereed"]), border=1)
+                pdf.cell(stat_widths[3], 6, f"{stat['max_wait']} min", border=1)
+            else:
+                pdf.cell(stat_widths[2], 6, f"{stat['max_wait']} min", border=1)
             pdf.ln()
 
         stats_bottom = pdf.get_y()
 
         # -- Field diagram (right column) --
         field_x = pdf.l_margin + stats_table_w + gap
-        field_y = section_top  # start at same level as stats title
+        field_y = section_top
 
-        # Field title
         pdf.set_font("Helvetica", "B", 11)
         pdf.set_xy(field_x, field_y)
         pdf.cell(draw_w, 8, "Dimensioni Campo")
         field_y += 8
 
-        # Green fill for the field
         pdf.set_fill_color(144, 190, 109)
         pdf.set_draw_color(50, 100, 50)
         pdf.set_line_width(0.5)
         pdf.rect(field_x, field_y, draw_w, draw_h, style="DF")
 
-        # Meta (in-goal) areas — dashed lines
         pdf.set_draw_color(255, 255, 255)
         pdf.set_line_width(0.3)
         pdf.dashed_line(
-            field_x + meta_mm,
-            field_y,
-            field_x + meta_mm,
-            field_y + draw_h,
-            dash_length=2,
-            space_length=1.5,
+            field_x + meta_mm, field_y,
+            field_x + meta_mm, field_y + draw_h,
+            dash_length=2, space_length=1.5,
         )
         pdf.dashed_line(
-            field_x + draw_w - meta_mm,
-            field_y,
-            field_x + draw_w - meta_mm,
-            field_y + draw_h,
-            dash_length=2,
-            space_length=1.5,
+            field_x + draw_w - meta_mm, field_y,
+            field_x + draw_w - meta_mm, field_y + draw_h,
+            dash_length=2, space_length=1.5,
         )
 
-        # Meta labels (white on green)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 7)
         pdf.set_xy(field_x + 1, field_y + draw_h / 2 - 2)
@@ -187,20 +188,29 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
         pdf.set_xy(field_x + draw_w - meta_mm + 1, field_y + draw_h / 2 - 2)
         pdf.cell(meta_mm - 2, 4, f"{config.meta}m", align="C")
 
-        # Reset colors
         pdf.set_text_color(0, 0, 0)
         pdf.set_draw_color(0, 0, 0)
 
-        # Length label (below field)
         pdf.set_font("Helvetica", "", 8)
         pdf.set_xy(field_x, field_y + draw_h + 1)
         pdf.cell(draw_w, 4, config.field_length, align="C")
-
-        # Width label (right of field)
         pdf.set_xy(field_x + draw_w + 2, field_y + draw_h / 2 - 2)
         pdf.cell(20, 4, config.field_width)
 
-        # Move cursor below whichever column is taller
+        # For U6, list all 3 field formats below the diagram
+        if sched.category == "U6":
+            pdf.set_font("Helvetica", "B", 8)
+            pdf.set_xy(field_x, field_y + draw_h + 6)
+            pdf.cell(draw_w, 5, "Dimensioni variabili in base al numero di giocatori:", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "", 8)
+            for players, fmt in U6_FIELD_FORMATS.items():
+                pdf.set_x(field_x)
+                pdf.cell(
+                    draw_w, 4,
+                    f"{players} vs {players}:  {fmt['field_width']} \u00d7 {fmt['field_length']}",
+                    new_x="LMARGIN", new_y="NEXT",
+                )
+
         pdf.set_y(max(stats_bottom, field_y + draw_h + 8) + 4)
 
     return pdf.output()
@@ -208,7 +218,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
 
 def schedule_to_excel(schedules: list[Schedule]) -> bytes:
     wb = Workbook()
-    wb.remove(wb.active)  # remove default sheet
+    wb.remove(wb.active)
 
     header_font = Font(bold=True)
     header_fill = PatternFill(
@@ -219,50 +229,57 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
         ws = wb.create_sheet(title=sched.category)
 
         # Schedule table
-        headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2", "Arbitro"]
+        if sched.no_referee:
+            headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2"]
+        else:
+            headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2", "Arbitro"]
         ws.append(headers)
-        for i, cell in enumerate(ws[1], 1):
+        for cell in ws[1]:
             cell.font = header_font
             cell.fill = header_fill
 
         resting_per_slot_xl = sched.resting_per_slot
         current_slot_xl = -1
+        num_cols = len(headers)
         for m in sched.matches:
             if m.time_slot != current_slot_xl:
                 if current_slot_xl >= 0:
                     resting = resting_per_slot_xl.get(current_slot_xl, [])
                     if resting:
-                        ws.append([f"Riposa: {', '.join(resting)}", "", "", "", "", ""])
+                        row = [f"Riposa: {', '.join(resting)}"] + [""] * (num_cols - 1)
+                        ws.append(row)
                         ws.cell(ws.max_row, 1).font = Font(italic=True, color="888888")
                 current_slot_xl = m.time_slot
-            ws.append(
-                [
-                    m.match_number,
-                    m.start_time,
-                    f"Campo {m.field_number}",
-                    m.team1,
-                    m.team2,
-                    m.referee,
-                ]
-            )
+            row = [m.match_number, m.start_time, f"Campo {m.field_number}", m.team1, m.team2]
+            if not sched.no_referee:
+                row.append(m.referee)
+            ws.append(row)
+
         # Riposa for the last slot
         if current_slot_xl >= 0:
             resting = resting_per_slot_xl.get(current_slot_xl, [])
             if resting:
-                ws.append([f"Riposa: {', '.join(resting)}", "", "", "", "", ""])
+                row = [f"Riposa: {', '.join(resting)}"] + [""] * (num_cols - 1)
+                ws.append(row)
                 ws.cell(ws.max_row, 1).font = Font(italic=True, color="888888")
 
         # Blank row then stats
         ws.append([])
         stats_start = ws.max_row + 1
-        ws.append(["Squadra", "Partite Giocate", "Arbitraggi", "Max Attesa (min)"])
+        if sched.no_referee:
+            ws.append(["Squadra", "Partite Giocate", "Max Attesa (min)"])
+        else:
+            ws.append(["Squadra", "Partite Giocate", "Arbitraggi", "Max Attesa (min)"])
         for cell in ws[stats_start]:
             if cell.value:
                 cell.font = header_font
                 cell.fill = header_fill
 
         for team, stat in sched.stats.items():
-            ws.append([team, stat["played"], stat["refereed"], stat["max_wait"]])
+            if sched.no_referee:
+                ws.append([team, stat["played"], stat["max_wait"]])
+            else:
+                ws.append([team, stat["played"], stat["refereed"], stat["max_wait"]])
 
         # Auto-width columns
         for col in ws.columns:

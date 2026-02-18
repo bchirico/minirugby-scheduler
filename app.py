@@ -14,7 +14,7 @@ from export import schedule_to_pdf, schedule_to_excel
 
 app = Flask(__name__)
 
-CATEGORY_ORDER = ["U8", "U10", "U12"]
+CATEGORY_ORDER = ["U6", "U8", "U10", "U12"]
 
 
 def parse_form(form) -> list[ScheduleRequest]:
@@ -43,6 +43,7 @@ def parse_form(form) -> list[ScheduleRequest]:
             if name:
                 team_names.append(name)
 
+        no_referee = bool(form.get(f"{cat}_no_referee"))
         requests.append(
             ScheduleRequest(
                 category=cat,
@@ -53,6 +54,7 @@ def parse_form(form) -> list[ScheduleRequest]:
                 match_duration=match_duration,
                 break_duration=break_duration,
                 team_names=team_names if len(team_names) == num_teams else [],
+                no_referee=no_referee,
             )
         )
     return requests
