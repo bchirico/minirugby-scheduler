@@ -269,6 +269,15 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     config = request.get_config()
     team_names = _resolve_team_names(request)
 
+    # Use request-level durations if provided, otherwise fall back to config
+    match_duration = (
+        request.match_duration if request.match_duration > 0 else config.match_duration
+    )
+    break_duration = (
+        request.break_duration if request.break_duration > 0 else config.break_duration
+    )
+    slot_duration = match_duration + break_duration
+
     if request.dedicated_referees:
         max_simultaneous = max(1, min(request.num_fields, n // 3))
     else:
@@ -277,16 +286,26 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         n, max_simultaneous, request.dedicated_referees
     )
     warnings += _check_early_start(n, team_names, slots)
-    matches = _build_matches(
-        slots, team_names, request.start_time, config.slot_duration
-    )
-    stats = _compute_stats(n, team_names, matches, referee_counts, config.slot_duration)
+    matches = _build_matches(slots, team_names, request.start_time, slot_duration)
+    stats = _compute_stats(n, team_names, matches, referee_counts, slot_duration)
+
+    # Check time overrun (per-team total play time)
+    time_overrun_warning = None
+    if request.total_game_time > 0:
+        matches_per_team = n - 1
+        actual_total = matches_per_team * match_duration
+        if actual_total > request.total_game_time:
+            time_overrun_warning = (
+                f"Il tempo totale di gioco per squadra ({actual_total} min) "
+                f"supera il limite ({request.total_game_time} min)"
+            )
 
     return Schedule(
         category=request.category,
         matches=matches,
         warnings=warnings,
         stats=stats,
+        time_overrun_warning=time_overrun_warning,
     )
 
 

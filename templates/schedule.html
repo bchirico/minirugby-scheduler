@@ -21,6 +21,12 @@
         <small>{{ schedule.matches | length }} partite | {{ schedule.stats | length }} squadre</small>
     </header>
 
+    {% if schedule.time_overrun_warning %}
+    <div style="background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; border-left: 4px solid #dc3545; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: bold;">
+        <p>{{ schedule.time_overrun_warning }}</p>
+    </div>
+    {% endif %}
+
     {% if schedule.warnings %}
     <div style="background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
         {% for w in schedule.warnings %}
