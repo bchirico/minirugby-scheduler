@@ -52,14 +52,14 @@
             <thead><tr>
                 <th>Campo</th>
                 <th>Partita</th>
-                <th>Arbitro</th>
+                {% if not schedule.no_referee %}<th>Arbitro</th>{% endif %}
             </tr></thead>
             <tbody>
         {% endif %}
         <tr>
             <td>Campo {{ match.field_number }}</td>
             <td><strong>{{ match.team1 }}</strong> vs <strong>{{ match.team2 }}</strong></td>
-            <td>{{ match.referee }}</td>
+            {% if not schedule.no_referee %}<td>{{ match.referee }}</td>{% endif %}
         </tr>
     {% endfor %}
     {% if schedule.matches %}
@@ -76,7 +76,7 @@
         <thead><tr>
             <th>Squadra</th>
             <th>Partite Giocate</th>
-            <th>Arbitraggi</th>
+            {% if not schedule.no_referee %}<th>Arbitraggi</th>{% endif %}
             <th>Max Attesa</th>
         </tr></thead>
         <tbody>
@@ -84,7 +84,7 @@
         <tr>
             <td>{{ team }}</td>
             <td>{{ stat.played }}</td>
-            <td>{{ stat.refereed }}</td>
+            {% if not schedule.no_referee %}<td>{{ stat.refereed }}</td>{% endif %}
             <td>{{ stat.max_wait }} min</td>
         </tr>
         {% endfor %}

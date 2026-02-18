@@ -148,6 +148,7 @@ def _fill_slots(
     n: int,
     max_simultaneous: int,
     dedicated_referees: bool = True,
+    no_referee: bool = False,
 ) -> tuple[list[list[tuple[int, int, int, int]]], dict[int, int], list[str]]:
     slots: list[list[tuple[int, int, int, int]]] = []
     referee_counts = {i: 0 for i in range(n)}
@@ -173,6 +174,16 @@ def _fill_slots(
             last_played[t1] = slot_idx
             last_played[t2] = slot_idx
         slot_idx += 1
+
+    if no_referee:
+        # Skip referee assignment entirely: use -1 as "no referee" placeholder
+        for scheduled_this_slot in slot_pairs_list:
+            current_slot: list[tuple[int, int, int, int]] = []
+            for idx, (t1, t2) in enumerate(scheduled_this_slot):
+                current_slot.append((t1, t2, -1, idx + 1))
+            if current_slot:
+                slots.append(current_slot)
+        return slots, referee_counts, warnings
 
     # Assign referees to each slot
     for scheduled_this_slot in slot_pairs_list:
@@ -286,7 +297,7 @@ def _build_matches(
                     match_number=match_num,
                     team1=team_names[t1],
                     team2=team_names[t2],
-                    referee=team_names[ref],
+                    referee=team_names[ref] if ref >= 0 else "",
                     field_number=field_num,
                     time_slot=slot_idx,
                     start_time=time_str,
@@ -340,12 +351,12 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     )
     slot_duration = match_duration + break_duration
 
-    if request.dedicated_referees:
-        max_simultaneous = max(1, min(request.num_fields, n // 3))
-    else:
+    if request.no_referee or not request.dedicated_referees:
         max_simultaneous = max(1, min(request.num_fields, n // 2))
+    else:
+        max_simultaneous = max(1, min(request.num_fields, n // 3))
     slots, referee_counts, warnings = _fill_slots(
-        n, max_simultaneous, request.dedicated_referees
+        n, max_simultaneous, request.dedicated_referees, request.no_referee
     )
     warnings += _check_early_start(n, team_names, slots)
     matches = _build_matches(slots, team_names, request.start_time, slot_duration)
@@ -369,6 +380,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         stats=stats,
         match_duration=match_duration,
         break_duration=break_duration,
+        no_referee=request.no_referee,
         time_overrun_warning=time_overrun_warning,
     )
 

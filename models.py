@@ -3,21 +3,30 @@ from typing import Optional
 
 
 TOTAL_GAME_TIMES = {
+    "U6": {"half": 30, "full": 45},
     "U8": {"half": 45, "full": 54},
     "U10": {"half": 50, "full": 60},
     "U12": {"half": 60, "full": 70},
 }
 
 RECOMMENDED_MATCH_TIMES = {
+    "U6": 7,
     "U8": 10,
     "U10": 10,
     "U12": 12,
 }
 
+# U6 field dimensions vary by match format (players per side)
+U6_FIELD_FORMATS = {
+    3: {"field_width": "5m",  "field_length": "15m", "field_width_max": 5,  "field_length_max": 15, "meta": 2},
+    4: {"field_width": "10m", "field_length": "22m", "field_width_max": 10, "field_length_max": 22, "meta": 2},
+    5: {"field_width": "15m", "field_length": "22m", "field_width_max": 15, "field_length_max": 22, "meta": 2},
+}
+
 
 @dataclass
 class CategoryConfig:
-    name: str  # "U8", "U10", "U12"
+    name: str  # "U6", "U8", "U10", "U12"
     match_duration: int  # minutes
     break_duration: int  # minutes
     field_width: str  # e.g. "17-20m"
@@ -32,6 +41,17 @@ class CategoryConfig:
 
 
 CATEGORIES = {
+    "U6": CategoryConfig(
+        "U6",
+        match_duration=7,
+        break_duration=5,
+        # Default to 4v4 dimensions; actual dimensions resolved via U6_FIELD_FORMATS
+        field_width="10m",
+        field_length="22m",
+        field_width_max=10,
+        field_length_max=22,
+        meta=2,
+    ),
     "U8": CategoryConfig(
         "U8",
         match_duration=10,
@@ -75,7 +95,7 @@ class Match:
 
 @dataclass
 class ScheduleRequest:
-    category: str  # "U8", "U10", "U12"
+    category: str  # "U6", "U8", "U10", "U12"
     num_teams: int
     num_fields: int
     start_time: str  # "HH:MM"
@@ -84,6 +104,7 @@ class ScheduleRequest:
     break_duration: int = 0  # minutes per break
     team_names: list[str] = field(default_factory=list)
     dedicated_referees: bool = False
+    no_referee: bool = False  # if True, referee column is omitted entirely
 
     def get_config(self) -> CategoryConfig:
         return CATEGORIES[self.category]
@@ -97,6 +118,7 @@ class Schedule:
     stats: dict  # {team_name: {"played": int, "refereed": int}}
     match_duration: int = 0
     break_duration: int = 0
+    no_referee: bool = False
     time_overrun_warning: Optional[str] = None
 
     @property
