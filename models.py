@@ -95,4 +95,18 @@ class Schedule:
     matches: list[Match]
     warnings: list[str]
     stats: dict  # {team_name: {"played": int, "refereed": int}}
+    match_duration: int = 0
+    break_duration: int = 0
     time_overrun_warning: Optional[str] = None
+
+    @property
+    def resting_per_slot(self) -> dict[int, list[str]]:
+        """Returns {time_slot: [teams not playing in that slot]}."""
+        all_teams = set(self.stats.keys())
+        playing_per_slot: dict[int, set[str]] = {}
+        for m in self.matches:
+            playing_per_slot.setdefault(m.time_slot, set()).update([m.team1, m.team2])
+        return {
+            slot: sorted(all_teams - playing)
+            for slot, playing in playing_per_slot.items()
+        }

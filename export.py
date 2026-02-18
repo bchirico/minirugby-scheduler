@@ -23,7 +23,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
             0,
             6,
             f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
-            f"{config.match_duration} min + {config.break_duration} min pausa",
+            f"{sched.match_duration} min + {sched.break_duration} min pausa",
             new_x="LMARGIN",
             new_y="NEXT",
         )
