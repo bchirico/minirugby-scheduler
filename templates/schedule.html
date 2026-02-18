@@ -11,7 +11,7 @@
 <div class="grid" style="margin-bottom: 2rem;">
     <button onclick="submitDownload('/download/pdf')">Scarica PDF</button>
     <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
-    <a href="/" role="button" class="outline">Torna al Modulo</a>
+    <button onclick="history.back()" class="outline">Torna al Modulo</button>
 </div>
 
 {% for schedule in schedules %}
