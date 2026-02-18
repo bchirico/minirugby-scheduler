@@ -11,7 +11,7 @@
 <div class="grid" style="margin-bottom: 2rem;">
     <button onclick="submitDownload('/download/pdf')">Scarica PDF</button>
     <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
-    <a href="/" role="button" class="outline">Torna al Modulo</a>
+    <button onclick="history.back()" class="outline">Torna al Modulo</button>
 </div>
 
 {% for schedule in schedules %}
@@ -40,9 +40,14 @@
         {% if match.time_slot != ns.current_slot %}
             {% if ns.current_slot >= 0 %}
             </tbody></table>
+            {% with resting = schedule.resting_per_slot.get(ns.current_slot, []) %}
+            {% if resting %}
+            <p style="color: #666; font-style: italic; margin: 0.25rem 0 0.75rem 0.25rem; font-size: 0.9em;">Riposa: {{ resting | join(', ') }}</p>
+            {% endif %}
+            {% endwith %}
             {% endif %}
             {% set ns.current_slot = match.time_slot %}
-            <h4>Slot {{ match.time_slot + 1 }} &mdash; {{ match.start_time }}</h4>
+            <h4>Turno {{ match.time_slot + 1 }} &mdash; {{ match.start_time }}</h4>
             <table>
             <thead><tr>
                 <th>Campo</th>
@@ -59,6 +64,11 @@
     {% endfor %}
     {% if schedule.matches %}
     </tbody></table>
+    {% with resting = schedule.resting_per_slot.get(ns.current_slot, []) %}
+    {% if resting %}
+    <p style="color: #666; font-style: italic; margin: 0.25rem 0 0.75rem 0.25rem; font-size: 0.9em;">Riposa: {{ resting | join(', ') }}</p>
+    {% endif %}
+    {% endwith %}
     {% endif %}
 
     <h4>Statistiche</h4>

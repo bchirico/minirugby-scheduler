@@ -23,7 +23,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
             0,
             6,
             f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
-            f"{config.match_duration} min + {config.break_duration} min pausa",
+            f"{sched.match_duration} min + {sched.break_duration} min pausa",
             new_x="LMARGIN",
             new_y="NEXT",
         )
@@ -46,12 +46,25 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
             pdf.cell(col_widths[i], 8, h, border=1, fill=True)
         pdf.ln()
 
-        pdf.set_font("Helvetica", "", 9)
+        resting_per_slot = sched.resting_per_slot
         current_slot = -1
         for m in sched.matches:
             if m.time_slot != current_slot:
-                current_slot = m.time_slot
-                if current_slot > 0:
+                if current_slot >= 0:
+                    # Riposa row for the slot that just ended
+                    resting = resting_per_slot.get(current_slot, [])
+                    if resting:
+                        pdf.set_font("Helvetica", "I", 8)
+                        pdf.set_fill_color(248, 248, 248)
+                        pdf.cell(
+                            sum(col_widths),
+                            6,
+                            f"Riposa: {', '.join(resting)}",
+                            border=1,
+                            fill=True,
+                            new_x="LMARGIN",
+                            new_y="NEXT",
+                        )
                     # Light separator between slots
                     pdf.set_fill_color(245, 245, 245)
                     pdf.cell(
@@ -63,13 +76,31 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
                         new_x="LMARGIN",
                         new_y="NEXT",
                     )
+                current_slot = m.time_slot
 
+            pdf.set_font("Helvetica", "", 9)
             pdf.cell(col_widths[0], 7, str(m.match_number), border=1)
             pdf.cell(col_widths[1], 7, m.start_time, border=1)
             pdf.cell(col_widths[2], 7, f"Campo {m.field_number}", border=1)
             pdf.cell(col_widths[3], 7, f"{m.team1} vs {m.team2}", border=1)
             pdf.cell(col_widths[4], 7, m.referee, border=1)
             pdf.ln()
+
+        # Riposa row for the last slot
+        if current_slot >= 0:
+            resting = resting_per_slot.get(current_slot, [])
+            if resting:
+                pdf.set_font("Helvetica", "I", 8)
+                pdf.set_fill_color(248, 248, 248)
+                pdf.cell(
+                    sum(col_widths),
+                    6,
+                    f"Riposa: {', '.join(resting)}",
+                    border=1,
+                    fill=True,
+                    new_x="LMARGIN",
+                    new_y="NEXT",
+                )
 
         pdf.ln(6)
 
@@ -194,7 +225,16 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
             cell.font = header_font
             cell.fill = header_fill
 
+        resting_per_slot_xl = sched.resting_per_slot
+        current_slot_xl = -1
         for m in sched.matches:
+            if m.time_slot != current_slot_xl:
+                if current_slot_xl >= 0:
+                    resting = resting_per_slot_xl.get(current_slot_xl, [])
+                    if resting:
+                        ws.append([f"Riposa: {', '.join(resting)}", "", "", "", "", ""])
+                        ws.cell(ws.max_row, 1).font = Font(italic=True, color="888888")
+                current_slot_xl = m.time_slot
             ws.append(
                 [
                     m.match_number,
@@ -205,6 +245,12 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
                     m.referee,
                 ]
             )
+        # Riposa for the last slot
+        if current_slot_xl >= 0:
+            resting = resting_per_slot_xl.get(current_slot_xl, [])
+            if resting:
+                ws.append([f"Riposa: {', '.join(resting)}", "", "", "", "", ""])
+                ws.cell(ws.max_row, 1).font = Font(italic=True, color="888888")
 
         # Blank row then stats
         ws.append([])

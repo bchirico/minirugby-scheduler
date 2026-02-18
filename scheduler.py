@@ -367,6 +367,8 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         matches=matches,
         warnings=warnings,
         stats=stats,
+        match_duration=match_duration,
+        break_duration=break_duration,
         time_overrun_warning=time_overrun_warning,
     )
 
