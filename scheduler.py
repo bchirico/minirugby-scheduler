@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from itertools import combinations
+from itertools import combinations, product
 
 from models import Match, Schedule, ScheduleRequest
 
@@ -101,6 +101,49 @@ def _find_best_group(
     return best
 
 
+def _assign_referees_for_slot(
+    matches: list[tuple[int, int]],
+    n: int,
+    referee_counts: dict[int, int],
+    dedicated_referees: bool,
+) -> list[int] | None:
+    """Find the most balanced referee assignment for all matches in a slot.
+
+    Enumerates all valid combinations and picks the one that minimises
+    referee-count imbalance across teams.
+    """
+    playing_teams = {t for t1, t2 in matches for t in (t1, t2)}
+
+    # Build candidate referees for each match
+    candidates_per_match: list[list[int]] = []
+    for t1, t2 in matches:
+        candidates = [t for t in range(n) if t not in playing_teams]
+        if not dedicated_referees:
+            candidates.extend([t1, t2])
+        if not candidates:
+            return None
+        candidates_per_match.append(candidates)
+
+    best_assignment: list[int] | None = None
+    best_score: tuple = (float("inf"), float("inf"))
+
+    for combo in product(*candidates_per_match):
+        if len(set(combo)) != len(combo):
+            continue
+
+        trial_counts = dict(referee_counts)
+        for ref in combo:
+            trial_counts[ref] += 1
+
+        counts = list(trial_counts.values())
+        score = (max(counts) - min(counts), max(counts))
+        if score < best_score:
+            best_score = score
+            best_assignment = list(combo)
+
+    return best_assignment
+
+
 def _fill_slots(
     n: int,
     max_simultaneous: int,
@@ -133,39 +176,58 @@ def _fill_slots(
 
     # Assign referees to each slot
     for scheduled_this_slot in slot_pairs_list:
-        playing_teams = {t for p in scheduled_this_slot for t in p}
+        assignment = _assign_referees_for_slot(
+            scheduled_this_slot, n, referee_counts, dedicated_referees
+        )
+        if assignment is None:
+            continue
+
         current_slot: list[tuple[int, int, int, int]] = []
-        refereeing_teams: set[int] = set()
-
-        for t1, t2 in scheduled_this_slot:
-            # Prefer resting teams (not playing, not already refereeing)
-            resting = [
-                t
-                for t in range(n)
-                if t not in playing_teams
-                and t not in refereeing_teams
-                and t != t1
-                and t != t2
-            ]
-            if resting:
-                referee = min(resting, key=lambda t: referee_counts[t])
-            elif not dedicated_referees:
-                # One of the two playing teams referees their own match
-                own_candidates = [t for t in (t1, t2) if t not in refereeing_teams]
-                if own_candidates:
-                    referee = min(own_candidates, key=lambda t: referee_counts[t])
-                else:
-                    continue
-            else:
-                continue
-
-            field_num = len(current_slot) + 1
+        for idx, (t1, t2) in enumerate(scheduled_this_slot):
+            referee = assignment[idx]
+            field_num = idx + 1
             current_slot.append((t1, t2, referee, field_num))
-            refereeing_teams.add(referee)
             referee_counts[referee] += 1
 
         if current_slot:
             slots.append(current_slot)
+
+    # Post-process: iteratively swap referees to balance counts
+    while True:
+        max_count = max(referee_counts.values())
+        min_count = min(referee_counts.values())
+        if max_count - min_count <= 1:
+            break
+
+        high_teams = [t for t, c in referee_counts.items() if c == max_count]
+        low_teams = [t for t, c in referee_counts.items() if c == min_count]
+
+        swapped = False
+        for team_high in high_teams:
+            for team_low in low_teams:
+                for slot in slots:
+                    playing = {t for t1, t2, _, _ in slot for t in (t1, t2)}
+                    refs = {ref for _, _, ref, _ in slot}
+                    if (
+                        team_high in refs
+                        and team_low not in playing
+                        and team_low not in refs
+                    ):
+                        for i, (t1, t2, ref, field) in enumerate(slot):
+                            if ref == team_high:
+                                slot[i] = (t1, t2, team_low, field)
+                                referee_counts[team_high] -= 1
+                                referee_counts[team_low] += 1
+                                swapped = True
+                                break
+                        break
+                if swapped:
+                    break
+            if swapped:
+                break
+
+        if not swapped:
+            break
 
     return slots, referee_counts, warnings
 
