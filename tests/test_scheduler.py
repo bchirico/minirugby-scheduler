@@ -140,13 +140,27 @@ class TestGenerateSchedule:
         for team, stat in sched.stats.items():
             assert stat["played"] == num_teams - 1
 
-    def test_referee_duties_distributed_evenly(self):
+    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_fields", [1, 2, 3])
+    @pytest.mark.parametrize("dedicated_referees", [True, False])
+    def test_referee_duties_distributed_evenly(
+        self, num_teams, num_fields, dedicated_referees
+    ):
         req = ScheduleRequest(
-            category="U10", num_teams=6, num_fields=2, start_time="09:00"
+            category="U10",
+            num_teams=num_teams,
+            num_fields=num_fields,
+            start_time="09:00",
+            dedicated_referees=dedicated_referees,
         )
         sched = generate_schedule(req)
+        if not sched.matches:
+            return
         ref_counts = [s["refereed"] for s in sched.stats.values()]
-        assert max(ref_counts) - min(ref_counts) <= 1
+        assert max(ref_counts) - min(ref_counts) <= 1, (
+            f"{num_teams}t {num_fields}f ded={dedicated_referees}: "
+            f"ref counts = {dict(zip(sched.stats.keys(), ref_counts))}"
+        )
 
     def test_custom_team_names(self):
         names = ["Lions", "Tigers", "Bears", "Eagles"]
