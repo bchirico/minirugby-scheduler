@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if event_name or event_date %}
+<div style="margin-bottom: 1.5rem;">
+    {% if event_name %}<h2 style="margin-bottom: 0.25rem;">{{ event_name }}</h2>{% endif %}
+    {% if event_date %}<p style="color: #666; margin: 0;">{{ event_date }}</p>{% endif %}
+</div>
+{% endif %}
+
 <!-- Hidden form for downloads (re-submits same data) -->
 <form method="post" id="downloadForm" style="display:none">
     {% for key, value in form_data.items(True) %}

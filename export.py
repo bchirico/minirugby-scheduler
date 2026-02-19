@@ -1,3 +1,4 @@
+from datetime import datetime
 from io import BytesIO
 
 from fpdf import FPDF
@@ -7,9 +8,26 @@ from openpyxl.styles import Font, PatternFill
 from models import CATEGORIES, U6_FIELD_FORMATS, Schedule
 
 
-def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
+def _format_date(date_str: str) -> str:
+    """Convert YYYY-MM-DD to DD/MM/YYYY, return as-is if not parseable."""
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except (ValueError, TypeError):
+        return date_str
+
+
+def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
+
+    if event_name or event_date:
+        pdf.add_page()
+        if event_name:
+            pdf.set_font("Helvetica", "B", 22)
+            pdf.cell(0, 14, event_name, new_x="LMARGIN", new_y="NEXT", align="C")
+        if event_date:
+            pdf.set_font("Helvetica", "", 13)
+            pdf.cell(0, 8, _format_date(event_date), new_x="LMARGIN", new_y="NEXT", align="C")
 
     for sched in schedules:
         pdf.add_page()
@@ -216,7 +234,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
     return pdf.output()
 
 
-def schedule_to_excel(schedules: list[Schedule]) -> bytes:
+def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -228,13 +246,20 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
     for sched in schedules:
         ws = wb.create_sheet(title=sched.category)
 
+        # Event header
+        if event_name or event_date:
+            header_parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+            ws.append([" — ".join(header_parts)])
+            ws.cell(ws.max_row, 1).font = Font(bold=True, size=13)
+            ws.append([])
+
         # Schedule table
         if sched.no_referee:
             headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2"]
         else:
             headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2", "Arbitro"]
         ws.append(headers)
-        for cell in ws[1]:
+        for cell in ws[ws.max_row]:
             cell.font = header_font
             cell.fill = header_fill
 
