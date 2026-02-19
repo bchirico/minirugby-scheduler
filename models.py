@@ -105,6 +105,7 @@ class ScheduleRequest:
     team_names: list[str] = field(default_factory=list)
     dedicated_referees: bool = False
     no_referee: bool = False  # if True, referee column is omitted entirely
+    half_time_interval: int = 0  # minutes of half-time break (U12 only)
 
     def get_config(self) -> CategoryConfig:
         return CATEGORIES[self.category]
@@ -119,6 +120,7 @@ class Schedule:
     match_duration: int = 0
     break_duration: int = 0
     no_referee: bool = False
+    half_time_interval: int = 0  # minutes of half-time break (U12 only)
     time_overrun_warning: Optional[str] = None
 
     @property

@@ -84,6 +84,14 @@
                        class="duration-input" data-category="{{ cat }}"
                        id="{{ cat }}_match_duration">
             </label>
+            {% if cat == "U12" %}
+            <label>
+                Intervallo (min)
+                <input type="number" name="{{ cat }}_half_time_interval" min="0"
+                       value="0" placeholder="0 = disabilitato"
+                       id="{{ cat }}_half_time_interval">
+            </label>
+            {% endif %}
             <label>
                 Durata pausa tra partite (min)
                 <input type="number" name="{{ cat }}_break_duration" min="1"

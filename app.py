@@ -44,6 +44,7 @@ def parse_form(form) -> list[ScheduleRequest]:
                 team_names.append(name)
 
         no_referee = bool(form.get(f"{cat}_no_referee"))
+        half_time_interval = int(form.get(f"{cat}_half_time_interval", 0) or 0)
         requests.append(
             ScheduleRequest(
                 category=cat,
@@ -55,6 +56,7 @@ def parse_form(form) -> list[ScheduleRequest]:
                 break_duration=break_duration,
                 team_names=team_names if len(team_names) == num_teams else [],
                 no_referee=no_referee,
+                half_time_interval=half_time_interval,
             )
         )
     return requests
