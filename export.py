@@ -20,18 +20,18 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    if event_name or event_date:
-        pdf.add_page()
-        if event_name:
-            pdf.set_font("Helvetica", "B", 22)
-            pdf.cell(0, 14, event_name, new_x="LMARGIN", new_y="NEXT", align="C")
-        if event_date:
-            pdf.set_font("Helvetica", "", 13)
-            pdf.cell(0, 8, _format_date(event_date), new_x="LMARGIN", new_y="NEXT", align="C")
-
     for sched in schedules:
         pdf.add_page()
         config = CATEGORIES[sched.category]
+
+        # Event header (small, top of each category page)
+        if event_name or event_date:
+            parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(0, 5, " — ".join(parts), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
 
         # Title
         pdf.set_font("Helvetica", "B", 18)
