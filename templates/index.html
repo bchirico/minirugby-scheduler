@@ -128,6 +128,13 @@
                        class="{{ cat }}-team-input" {% if i > 6 %}style="display:none"{% endif %}>
                 {% endfor %}
             </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875em; color: #666;">
+                Copia da:
+                {% for other in category_order %}{% if other != cat %}
+                <button type="button" class="outline" style="padding: 0.15rem 0.5rem; font-size: 0.8em; margin-left: 0.25rem;"
+                        onclick="copyTeamNames('{{ other }}', '{{ cat }}')">{{ other }}</button>
+                {% endif %}{% endfor %}
+            </div>
         </fieldset>
     </details>
     {% endfor %}
@@ -217,6 +224,17 @@ document.querySelectorAll('.team-count-select').forEach(select => {
 
 // Initial calculation for all categories
 CATEGORIES.forEach(cat => recalculate(cat));
+
+// Copy team names from one category to another
+function copyTeamNames(src, dst) {
+    const srcCount = parseInt(document.querySelector(`[name="${src}_num_teams"]`).value);
+    const dstCount = parseInt(document.querySelector(`[name="${dst}_num_teams"]`).value);
+    const count = Math.min(srcCount, dstCount);
+    for (let i = 1; i <= count; i++) {
+        const val = document.querySelector(`[name="${src}_team_${i}"]`).value;
+        document.querySelector(`[name="${dst}_team_${i}"]`).value = val;
+    }
+}
 
 // Accordion: open/close <details> when category checkbox changes
 // Submit button: enabled only when at least one category is checked
