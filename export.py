@@ -1,3 +1,4 @@
+from datetime import datetime
 from io import BytesIO
 
 from fpdf import FPDF
@@ -7,13 +8,30 @@ from openpyxl.styles import Font, PatternFill
 from models import CATEGORIES, U6_FIELD_FORMATS, Schedule
 
 
-def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
+def _format_date(date_str: str) -> str:
+    """Convert YYYY-MM-DD to DD/MM/YYYY, return as-is if not parseable."""
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except (ValueError, TypeError):
+        return date_str
+
+
+def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     for sched in schedules:
         pdf.add_page()
         config = CATEGORIES[sched.category]
+
+        # Event header (small, top of each category page)
+        if event_name or event_date:
+            parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
 
         # Title
         pdf.set_font("Helvetica", "B", 18)
@@ -62,33 +80,22 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
                         pdf.set_fill_color(248, 248, 248)
                         pdf.cell(
                             sum(col_widths),
-                            6,
+                            5,
                             f"Riposa: {', '.join(resting)}",
                             border=1,
                             fill=True,
                             new_x="LMARGIN",
                             new_y="NEXT",
                         )
-                    # Light separator between slots
-                    pdf.set_fill_color(245, 245, 245)
-                    pdf.cell(
-                        sum(col_widths),
-                        2,
-                        "",
-                        border=0,
-                        fill=True,
-                        new_x="LMARGIN",
-                        new_y="NEXT",
-                    )
                 current_slot = m.time_slot
 
             pdf.set_font("Helvetica", "", 9)
-            pdf.cell(col_widths[0], 7, str(m.match_number), border=1)
-            pdf.cell(col_widths[1], 7, m.start_time, border=1)
-            pdf.cell(col_widths[2], 7, f"Campo {m.field_number}", border=1)
-            pdf.cell(col_widths[3], 7, f"{m.team1} vs {m.team2}", border=1)
+            pdf.cell(col_widths[0], 6, str(m.match_number), border=1)
+            pdf.cell(col_widths[1], 6, m.start_time, border=1)
+            pdf.cell(col_widths[2], 6, f"Campo {m.field_number}", border=1)
+            pdf.cell(col_widths[3], 6, f"{m.team1} vs {m.team2}", border=1)
             if not sched.no_referee:
-                pdf.cell(col_widths[4], 7, m.referee, border=1)
+                pdf.cell(col_widths[4], 6, m.referee, border=1)
             pdf.ln()
 
         # Riposa row for the last slot
@@ -99,7 +106,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
                 pdf.set_fill_color(248, 248, 248)
                 pdf.cell(
                     sum(col_widths),
-                    6,
+                    5,
                     f"Riposa: {', '.join(resting)}",
                     border=1,
                     fill=True,
@@ -107,7 +114,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
                     new_y="NEXT",
                 )
 
-        pdf.ln(6)
+        pdf.ln(3)
 
         # --- Stats table (left) + Field diagram (right) side by side ---
         stats_table_w = 95
@@ -216,7 +223,7 @@ def schedule_to_pdf(schedules: list[Schedule]) -> bytes:
     return pdf.output()
 
 
-def schedule_to_excel(schedules: list[Schedule]) -> bytes:
+def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -228,13 +235,20 @@ def schedule_to_excel(schedules: list[Schedule]) -> bytes:
     for sched in schedules:
         ws = wb.create_sheet(title=sched.category)
 
+        # Event header
+        if event_name or event_date:
+            header_parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+            ws.append([" - ".join(header_parts)])
+            ws.cell(ws.max_row, 1).font = Font(bold=True, size=13)
+            ws.append([])
+
         # Schedule table
         if sched.no_referee:
             headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2"]
         else:
             headers = ["#", "Orario", "Campo", "Squadra 1", "Squadra 2", "Arbitro"]
         ws.append(headers)
-        for cell in ws[1]:
+        for cell in ws[ws.max_row]:
             cell.font = header_font
             cell.fill = header_fill
 

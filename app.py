@@ -93,13 +93,17 @@ def schedule():
         schedules=schedules,
         categories=CATEGORIES,
         form_data=request.form,
+        event_name=request.form.get("event_name", "").strip(),
+        event_date=request.form.get("event_date", "").strip(),
     )
 
 
 @app.route("/download/pdf", methods=["POST"])
 def download_pdf():
     schedules = generate_all(request.form)
-    pdf_bytes = schedule_to_pdf(schedules)
+    event_name = request.form.get("event_name", "").strip()
+    event_date = request.form.get("event_date", "").strip()
+    pdf_bytes = schedule_to_pdf(schedules, event_name, event_date)
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",
@@ -111,7 +115,9 @@ def download_pdf():
 @app.route("/download/excel", methods=["POST"])
 def download_excel():
     schedules = generate_all(request.form)
-    excel_bytes = schedule_to_excel(schedules)
+    event_name = request.form.get("event_name", "").strip()
+    event_date = request.form.get("event_date", "").strip()
+    excel_bytes = schedule_to_excel(schedules, event_name, event_date)
     return send_file(
         BytesIO(excel_bytes),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

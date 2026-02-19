@@ -8,11 +8,18 @@
     {% endfor %}
 </form>
 
-<div class="grid" style="margin-bottom: 2rem;">
+<div class="grid" style="margin-bottom: 1rem;">
     <button onclick="submitDownload('/download/pdf')">Scarica PDF</button>
     <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
     <button onclick="history.back()" class="outline">Torna al Modulo</button>
 </div>
+
+{% if event_name or event_date %}
+<div style="margin-bottom: 1.5rem;">
+    {% if event_name %}<h2 style="margin-bottom: 0.25rem;">{{ event_name }}</h2>{% endif %}
+    {% if event_date %}<p style="color: #666; margin: 0;">{{ event_date }}</p>{% endif %}
+</div>
+{% endif %}
 
 {% for schedule in schedules %}
 <article>
