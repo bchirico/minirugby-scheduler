@@ -474,13 +474,78 @@ class TestComputeStats:
             Match(3, "B", "C", "A", 1, 3, "09:45"),
         ]
         referee_counts = {0: 1, 1: 1, 2: 1}
-        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts, 15)
-        # A plays slots 0,1 -> gap 1 -> 15 min
-        assert stats["A"]["max_wait"] == 15
-        # B plays slots 0,3 -> gap 3 -> 45 min
-        assert stats["B"]["max_wait"] == 45
-        # C plays slots 1,3 -> gap 2 -> 30 min
-        assert stats["C"]["max_wait"] == 30
+        # slot_duration=15, break_duration=5
+        # max_wait = (gap - 1) * slot_duration + break_duration
+        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts, 15, break_duration=5)
+        # A plays slots 0,1 -> gap 1 -> (1-1)*15 + 5 = 5 min
+        assert stats["A"]["max_wait"] == 5
+        # B plays slots 0,3 -> gap 3 -> (3-1)*15 + 5 = 35 min
+        assert stats["B"]["max_wait"] == 35
+        # C plays slots 1,3 -> gap 2 -> (2-1)*15 + 5 = 20 min
+        assert stats["C"]["max_wait"] == 20
+
+
+class TestHalfTimeInterval:
+    def test_interval_increases_slot_duration(self):
+        """half_time_interval adds to slot duration (affects match start times)."""
+        req = ScheduleRequest(
+            category="U12",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            match_duration=12,
+            break_duration=5,
+            half_time_interval=2,
+        )
+        sched = generate_schedule(req)
+        # slot_duration = 12 + 2 + 5 = 19 min
+        times = [m.start_time for m in sched.matches]
+        assert times == ["09:00", "09:19", "09:38"]
+
+    def test_interval_not_counted_as_play_time(self):
+        """half_time_interval is excluded from the time-overrun budget check."""
+        # 3 teams: 2 matches each, match_duration=12 -> actual play = 24 min
+        # budget = 20 min -> overrun (24 > 20), interval should not affect check
+        req = ScheduleRequest(
+            category="U12",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            match_duration=12,
+            break_duration=5,
+            half_time_interval=3,
+            total_game_time=20,
+        )
+        sched = generate_schedule(req)
+        assert sched.time_overrun_warning is not None
+        assert "supera il limite" in sched.time_overrun_warning
+
+    def test_interval_zero_does_not_change_slot_duration(self):
+        """With half_time_interval=0, slot duration matches the base U12 default."""
+        req = ScheduleRequest(
+            category="U12", num_teams=3, num_fields=1, start_time="10:00"
+        )
+        sched = generate_schedule(req)
+        times = [m.start_time for m in sched.matches]
+        assert times == ["10:00", "10:17", "10:34"]  # 12 + 5 = 17 min
+
+    def test_interval_stored_on_schedule(self):
+        req = ScheduleRequest(
+            category="U12",
+            num_teams=4,
+            num_fields=1,
+            start_time="09:00",
+            half_time_interval=2,
+        )
+        sched = generate_schedule(req)
+        assert sched.half_time_interval == 2
+
+    def test_interval_default_is_zero(self):
+        req = ScheduleRequest(
+            category="U12", num_teams=4, num_fields=1, start_time="09:00"
+        )
+        sched = generate_schedule(req)
+        assert sched.half_time_interval == 0
 
 
 class TestModels:

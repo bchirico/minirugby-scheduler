@@ -314,6 +314,7 @@ def _compute_stats(
     matches: list[Match],
     referee_counts: dict[int, int],
     slot_duration: int,
+    break_duration: int = 0,
 ) -> dict:
     stats = {}
     for i in range(n):
@@ -326,7 +327,8 @@ def _compute_stats(
             max_gap = max(
                 team_slots[j + 1] - team_slots[j] for j in range(len(team_slots) - 1)
             )
-            max_wait = max_gap * slot_duration
+            # Idle time = time after match ends until next match starts
+            max_wait = (max_gap - 1) * slot_duration + break_duration
         else:
             max_wait = 0
         stats[name] = {
@@ -349,7 +351,8 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     break_duration = (
         request.break_duration if request.break_duration > 0 else config.break_duration
     )
-    slot_duration = match_duration + break_duration
+    half_time_interval = request.half_time_interval
+    slot_duration = match_duration + half_time_interval + break_duration
 
     if request.no_referee or not request.dedicated_referees:
         max_simultaneous = max(1, min(request.num_fields, n // 2))
@@ -360,7 +363,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
     )
     warnings += _check_early_start(n, team_names, slots)
     matches = _build_matches(slots, team_names, request.start_time, slot_duration)
-    stats = _compute_stats(n, team_names, matches, referee_counts, slot_duration)
+    stats = _compute_stats(n, team_names, matches, referee_counts, slot_duration, break_duration)
 
     # Check time overrun (per-team total play time)
     time_overrun_warning = None
@@ -381,6 +384,7 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         match_duration=match_duration,
         break_duration=break_duration,
         no_referee=request.no_referee,
+        half_time_interval=half_time_interval,
         time_overrun_warning=time_overrun_warning,
     )
 

@@ -37,11 +37,18 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
         pdf.set_font("Helvetica", "B", 18)
         pdf.cell(0, 12, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 10)
+        if sched.half_time_interval > 0:
+            half = sched.match_duration // 2
+            match_desc = (
+                f"{half} min + {half} min ({sched.half_time_interval} min intervallo)"
+            )
+        else:
+            match_desc = f"{sched.match_duration} min"
         pdf.cell(
             0,
             6,
             f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
-            f"{sched.match_duration} min + {sched.break_duration} min pausa",
+            f"{match_desc} + {sched.break_duration} min pausa",
             new_x="LMARGIN",
             new_y="NEXT",
         )
