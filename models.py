@@ -106,6 +106,8 @@ class ScheduleRequest:
     dedicated_referees: bool = False
     no_referee: bool = False  # if True, referee column is omitted entirely
     half_time_interval: int = 0  # minutes of half-time break (U12 only)
+    lunch_break: int = 0  # mid-day break in minutes (full-day only)
+    split_ratio: str = ""  # "half" | "two_thirds" | "" (no split)
 
     def get_config(self) -> CategoryConfig:
         return CATEGORIES[self.category]
@@ -121,6 +123,8 @@ class Schedule:
     break_duration: int = 0
     no_referee: bool = False
     half_time_interval: int = 0  # minutes of half-time break (U12 only)
+    morning_slots: int = 0  # number of morning slots (0 = no lunch split)
+    lunch_break: int = 0  # mid-day break in minutes
     time_overrun_warning: Optional[str] = None
 
     @property

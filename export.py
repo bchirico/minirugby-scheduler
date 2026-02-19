@@ -94,6 +94,22 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
                             new_x="LMARGIN",
                             new_y="NEXT",
                         )
+                # Lunch break row between morning and afternoon
+                if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
+                    pdf.set_font("Helvetica", "B", 10)
+                    pdf.set_fill_color(74, 108, 247)
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.cell(
+                        sum(col_widths),
+                        8,
+                        f"PAUSA  {sched.lunch_break} min",
+                        border=0,
+                        fill=True,
+                        align="C",
+                        new_x="LMARGIN",
+                        new_y="NEXT",
+                    )
+                    pdf.set_text_color(0, 0, 0)
                 current_slot = m.time_slot
 
             pdf.set_font("Helvetica", "", 9)
@@ -262,6 +278,7 @@ def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_dat
         resting_per_slot_xl = sched.resting_per_slot
         current_slot_xl = -1
         num_cols = len(headers)
+        lunch_fill = PatternFill(start_color="4A6CF7", end_color="4A6CF7", fill_type="solid")
         for m in sched.matches:
             if m.time_slot != current_slot_xl:
                 if current_slot_xl >= 0:
@@ -270,6 +287,13 @@ def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_dat
                         row = [f"Riposa: {', '.join(resting)}"] + [""] * (num_cols - 1)
                         ws.append(row)
                         ws.cell(ws.max_row, 1).font = Font(italic=True, color="888888")
+                # Lunch break row
+                if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
+                    row = [f"PAUSA  {sched.lunch_break} min"] + [""] * (num_cols - 1)
+                    ws.append(row)
+                    for cell in ws[ws.max_row]:
+                        cell.font = Font(bold=True, color="FFFFFF")
+                        cell.fill = lunch_fill
                 current_slot_xl = m.time_slot
             row = [m.match_number, m.start_time, f"Campo {m.field_number}", m.team1, m.team2]
             if not sched.no_referee:

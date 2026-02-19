@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta
 from itertools import combinations, product
 
@@ -282,13 +283,21 @@ def _build_matches(
     team_names: list[str],
     start_time: str,
     slot_duration: int,
+    morning_slots: int = 0,
+    lunch_break: int = 0,
+    break_duration: int = 0,
 ) -> list[Match]:
     base_time = datetime.strptime(start_time, "%H:%M")
+    # Afternoon slots start later by (lunch_break - break_duration):
+    # the ordinary break after the last morning match is replaced by lunch_break.
+    afternoon_offset = timedelta(minutes=lunch_break - break_duration) if morning_slots > 0 and lunch_break > 0 else timedelta(0)
     matches = []
     match_num = 1
 
     for slot_idx, slot in enumerate(slots):
         slot_time = base_time + timedelta(minutes=slot_idx * slot_duration)
+        if morning_slots > 0 and lunch_break > 0 and slot_idx >= morning_slots:
+            slot_time += afternoon_offset
         time_str = slot_time.strftime("%H:%M")
 
         for t1, t2, ref, field_num in slot:
@@ -362,7 +371,20 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         n, max_simultaneous, request.dedicated_referees, request.no_referee
     )
     warnings += _check_early_start(n, team_names, slots)
-    matches = _build_matches(slots, team_names, request.start_time, slot_duration)
+
+    # Compute morning/afternoon split for full-day schedules
+    morning_slots = 0
+    lunch_break = request.lunch_break
+    if lunch_break > 0 and request.split_ratio and len(slots) > 1:
+        if request.split_ratio == "half":
+            morning_slots = math.ceil(len(slots) / 2)
+        elif request.split_ratio == "two_thirds":
+            morning_slots = math.ceil(len(slots) * 2 / 3)
+
+    matches = _build_matches(
+        slots, team_names, request.start_time, slot_duration,
+        morning_slots, lunch_break, break_duration,
+    )
     stats = _compute_stats(n, team_names, matches, referee_counts, slot_duration, break_duration)
 
     # Check time overrun (per-team total play time)
@@ -385,6 +407,8 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
         break_duration=break_duration,
         no_referee=request.no_referee,
         half_time_interval=half_time_interval,
+        morning_slots=morning_slots,
+        lunch_break=lunch_break,
         time_overrun_warning=time_overrun_warning,
     )
 

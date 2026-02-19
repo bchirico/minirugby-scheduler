@@ -45,6 +45,8 @@ def parse_form(form) -> list[ScheduleRequest]:
 
         no_referee = bool(form.get(f"{cat}_no_referee"))
         half_time_interval = int(form.get(f"{cat}_half_time_interval", 0) or 0)
+        lunch_break = int(form.get(f"{cat}_lunch_break", 0) or 0)
+        split_ratio = form.get(f"{cat}_split_ratio", "half")
         requests.append(
             ScheduleRequest(
                 category=cat,
@@ -57,6 +59,8 @@ def parse_form(form) -> list[ScheduleRequest]:
                 team_names=team_names if len(team_names) == num_teams else [],
                 no_referee=no_referee,
                 half_time_interval=half_time_interval,
+                lunch_break=lunch_break,
+                split_ratio=split_ratio,
             )
         )
     return requests

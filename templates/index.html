@@ -32,6 +32,22 @@
             <input type="checkbox" name="{{ cat }}_full_day" value="1" class="full-day-checkbox" data-category="{{ cat }}">
             Giornata intera
         </label>
+        <div id="{{ cat }}_lunch_options" style="display:none; background: #f0f4f8; border: 1px solid #c8d8e8; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem;">
+            <div class="grid">
+                <label>
+                    Pausa di metà giornata (min)
+                    <input type="number" name="{{ cat }}_lunch_break" min="0"
+                           placeholder="es. 60" id="{{ cat }}_lunch_break">
+                </label>
+                <label>
+                    Distribuzione turni
+                    <select name="{{ cat }}_split_ratio" id="{{ cat }}_split_ratio">
+                        <option value="half">1/2 mattina, 1/2 pomeriggio</option>
+                        <option value="two_thirds">2/3 mattina, 1/3 pomeriggio</option>
+                    </select>
+                </label>
+            </div>
+        </div>
         <label>
             <input type="checkbox" name="{{ cat }}_no_referee" value="1">
             Non gestire gli arbitraggi
@@ -166,6 +182,11 @@ document.querySelectorAll('.full-day-checkbox').forEach(cb => {
         const dayKey = this.checked ? 'full' : 'half';
         document.getElementById(`${cat}_total_game_time`).value = TOTAL_GAME_TIMES[cat][dayKey];
         recalculate(cat);
+        // Show/hide lunch break options
+        document.getElementById(`${cat}_lunch_options`).style.display = this.checked ? '' : 'none';
+        if (!this.checked) {
+            document.getElementById(`${cat}_lunch_break`).value = '';
+        }
     });
 });
 
