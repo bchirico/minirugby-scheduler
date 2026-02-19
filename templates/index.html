@@ -8,12 +8,23 @@
 {% endif %}
 
 <form method="post" action="/schedule" id="mainForm">
+    <div class="grid">
+        <label>
+            Nome evento
+            <input type="text" name="event_name" placeholder="es. Torneo Primaverile 2026">
+        </label>
+        <label>
+            Data
+            <input type="date" name="event_date">
+        </label>
+    </div>
+
     {% for cat in category_order %}
     {% set config = categories[cat] %}
-    <details {% if loop.first %}open{% endif %}>
+    <details>
         <summary>
             <label>
-                <input type="checkbox" name="{{ cat }}_enabled" value="1" {% if loop.first %}checked{% endif %}>
+                <input type="checkbox" name="{{ cat }}_enabled" value="1" class="category-checkbox" data-details-id="{{ cat }}_details">
                 {{ cat }}
             </label>
         </summary>
@@ -74,7 +85,7 @@
                        id="{{ cat }}_match_duration">
             </label>
             <label>
-                Durata pausa (min)
+                Durata pausa tra partite (min)
                 <input type="number" name="{{ cat }}_break_duration" min="1"
                        value="{{ config.break_duration }}"
                        class="duration-input" data-category="{{ cat }}"
@@ -97,7 +108,7 @@
     </details>
     {% endfor %}
 
-    <button type="submit">Genera Calendari</button>
+    <button type="submit" id="submitBtn" disabled>Genera Calendari</button>
 </form>
 {% endblock %}
 
@@ -177,5 +188,23 @@ document.querySelectorAll('.team-count-select').forEach(select => {
 
 // Initial calculation for all categories
 CATEGORIES.forEach(cat => recalculate(cat));
+
+// Accordion: open/close <details> when category checkbox changes
+// Submit button: enabled only when at least one category is checked
+const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+const submitBtn = document.getElementById('submitBtn');
+
+function updateSubmitButton() {
+    submitBtn.disabled = !Array.from(categoryCheckboxes).some(cb => cb.checked);
+}
+
+categoryCheckboxes.forEach(cb => {
+    cb.addEventListener('change', function() {
+        this.closest('details').open = this.checked;
+        updateSubmitButton();
+    });
+});
+
+updateSubmitButton();
 </script>
 {% endblock %}
