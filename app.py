@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from flask import Flask, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file
 
 from models import (
     CATEGORIES,
@@ -11,6 +11,7 @@ from models import (
 )
 from scheduler import generate_schedule
 from export import schedule_to_pdf, schedule_to_excel
+from sessions import load_sessions, save_session
 
 app = Flask(__name__)
 
@@ -79,7 +80,24 @@ def index():
         category_order=CATEGORY_ORDER,
         total_game_times=TOTAL_GAME_TIMES,
         recommended_match_times=RECOMMENDED_MATCH_TIMES,
+        sessions=load_sessions(),
     )
+
+
+@app.route("/save-session", methods=["POST"])
+def save_session_route():
+    data = request.get_json(silent=True) or {}
+    label = str(data.get("label", "")).strip()
+    form_data = data.get("form_data", {})
+    if not label:
+        event_name = form_data.get("event_name", "").strip()
+        event_date = form_data.get("event_date", "").strip()
+        label = f"{event_name} {event_date}".strip()
+    if not label:
+        from datetime import datetime
+        label = datetime.now().strftime("%Y-%m-%d %H:%M")
+    save_session(label, form_data)
+    return jsonify({"ok": True})
 
 
 @app.route("/schedule", methods=["POST"])

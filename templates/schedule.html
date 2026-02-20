@@ -14,6 +14,14 @@
     <button onclick="history.back()" class="outline">Torna al Modulo</button>
 </div>
 
+<div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1.5rem;">
+    <input type="text" id="sessionLabel" placeholder="Nome sessione (lascia vuoto per usare nome/data evento)"
+           style="margin:0; flex:1;">
+    <button type="button" class="outline" onclick="saveSession()"
+            style="white-space:nowrap; width:auto;">Salva sessione</button>
+    <span id="saveMsg" style="display:none; color:#0a7c42; font-weight:bold;">&#10003; Salvato!</span>
+</div>
+
 {% if event_name or event_date %}
 <div style="margin-bottom: 1.5rem;">
     {% if event_name %}<h2 style="margin-bottom: 0.25rem;">{{ event_name }}</h2>{% endif %}
@@ -112,6 +120,25 @@ function submitDownload(url) {
     const form = document.getElementById('downloadForm');
     form.action = url;
     form.submit();
+}
+
+function saveSession() {
+    const label = document.getElementById('sessionLabel').value.trim();
+    const formData = {};
+    document.querySelectorAll('#downloadForm input[type="hidden"]').forEach(input => {
+        formData[input.name] = input.value;
+    });
+    fetch('/save-session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({label, form_data: formData})
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            const msg = document.getElementById('saveMsg');
+            msg.style.display = '';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+    });
 }
 </script>
 {% endblock %}

@@ -7,6 +7,18 @@
 </div>
 {% endif %}
 
+{% if sessions %}
+<div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1.5rem; background:#f0f4f8; border:1px solid #c8d8e8; border-radius:6px; padding:0.75rem 1rem;">
+    <select id="sessionSelect" style="margin:0; flex:1;">
+        {% for s in sessions %}
+        <option value="{{ s.id }}">{{ s.label }} &mdash; {{ s.saved_at[:16] | replace("T", " ") }}</option>
+        {% endfor %}
+    </select>
+    <button type="button" class="outline" onclick="loadSession()"
+            style="white-space:nowrap; width:auto;">Carica</button>
+</div>
+{% endif %}
+
 <form method="post" action="/schedule" id="mainForm">
     <div class="grid">
         <label>
@@ -148,6 +160,52 @@
 const TOTAL_GAME_TIMES = {{ total_game_times | tojson }};
 const RECOMMENDED_MATCH_TIMES = {{ recommended_match_times | tojson }};
 const CATEGORIES = {{ category_order | tojson }};
+const SESSIONS = {{ sessions | tojson }};
+
+function loadSession() {
+    const select = document.getElementById('sessionSelect');
+    if (!select) return;
+    const session = SESSIONS.find(s => s.id === select.value);
+    if (!session) return;
+    const formData = session.form_data;
+
+    // Fill all form fields
+    Object.entries(formData).forEach(([name, value]) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (!el) return;
+        if (el.type === 'checkbox') {
+            el.checked = value === '1';
+        } else {
+            el.value = value;
+        }
+    });
+
+    // Sync accordion open state with checkbox state
+    document.querySelectorAll('.category-checkbox').forEach(cb => {
+        cb.closest('details').open = cb.checked;
+    });
+
+    // Sync full-day lunch options visibility
+    document.querySelectorAll('.full-day-checkbox').forEach(cb => {
+        const cat = cb.dataset.category;
+        document.getElementById(`${cat}_lunch_options`).style.display = cb.checked ? '' : 'none';
+        if (!cb.checked) {
+            document.getElementById(`${cat}_lunch_break`).value = '';
+        }
+    });
+
+    // Sync team name visibility
+    document.querySelectorAll('.team-count-select').forEach(sel => {
+        const cat = sel.dataset.category;
+        const count = parseInt(sel.value);
+        document.querySelectorAll('.' + cat + '-team-input').forEach((input, idx) => {
+            input.style.display = idx < count ? '' : 'none';
+        });
+    });
+
+    CATEGORIES.forEach(cat => recalculate(cat));
+    updateSubmitButton();
+}
 
 // Auto-calculate match and break durations based on total game time
 function recalculate(cat) {
