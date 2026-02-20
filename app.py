@@ -127,7 +127,13 @@ def download_pdf():
     schedules = generate_all(request.form)
     event_name = request.form.get("event_name", "").strip()
     event_date = request.form.get("event_date", "").strip()
-    pdf_bytes = schedule_to_pdf(schedules, event_name, event_date)
+    include_main = request.form.get("pdf_main", "1") == "1"
+    include_field = request.form.get("pdf_field", "1") == "1"
+    include_team = request.form.get("pdf_team", "1") == "1"
+    pdf_bytes = schedule_to_pdf(
+        schedules, event_name, event_date,
+        include_main=include_main, include_field=include_field, include_team=include_team,
+    )
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",

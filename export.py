@@ -241,173 +241,33 @@ def _render_team_page(pdf, team_name, sched, event_name, event_date):
         pdf.ln()
 
 
-def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
+def schedule_to_pdf(
+    schedules: list[Schedule],
+    event_name: str = "",
+    event_date: str = "",
+    *,
+    include_main: bool = True,
+    include_field: bool = True,
+    include_team: bool = True,
+) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     for sched in schedules:
-        pdf.add_page()
         config = CATEGORIES[sched.category]
 
-        # Event header (small, top of each category page)
-        if event_name or event_date:
-            parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
-            pdf.set_font("Helvetica", "I", 9)
-            pdf.set_text_color(100, 100, 100)
-            pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
-            pdf.set_text_color(0, 0, 0)
-            pdf.ln(2)
-
-        # Title
-        pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(0, 12, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 10)
-        if sched.half_time_interval > 0:
-            half = sched.match_duration // 2
-            match_desc = (
-                f"{half} min + {half} min ({sched.half_time_interval} min intervallo)"
-            )
-        else:
-            match_desc = f"{sched.match_duration} min"
-        pdf.cell(
-            0,
-            6,
-            f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
-            f"{match_desc} + {sched.break_duration} min pausa",
-            new_x="LMARGIN",
-            new_y="NEXT",
-        )
-        pdf.ln(4)
-
-        # Warnings
-        for w in sched.warnings:
-            pdf.set_font("Helvetica", "I", 9)
-            pdf.cell(0, 5, f"Nota: {w}", new_x="LMARGIN", new_y="NEXT")
-        if sched.warnings:
-            pdf.ln(2)
-
-        # Match table — Arbitro column omitted when no_referee
+        # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [15, 25, 55, 65, 30]  # #, Time, Field, Match, Result
+            col_widths = [15, 25, 55, 65, 30]
             headers = ["#", "Orario", "Campo", "Partita", "Risultato"]
         else:
-            col_widths = [15, 25, 45, 50, 25, 30]  # #, Time, Field, Match, Referee, Result
+            col_widths = [15, 25, 45, 50, 25, 30]
             headers = ["#", "Orario", "Campo", "Partita", "Arbitro", "Risultato"]
 
-        _render_match_table(pdf, sched.matches, sched, col_widths, headers)
-
-        pdf.ln(3)
-
-        # --- Stats table (left) + Field diagram (right) side by side ---
-        stats_table_w = 95
-        gap = 10
-        draw_w = 80
-        draw_h = draw_w * config.field_width_max / config.field_length_max
-        meta_mm = draw_w * config.meta / config.field_length_max
-
-        num_teams = len(sched.stats)
-        stats_h = 8 + 8 + num_teams * 7
-        section_h = max(stats_h, draw_h + 20) + 10
-        if pdf.get_y() + section_h > pdf.h - pdf.b_margin:
+        if include_main:
             pdf.add_page()
 
-        section_top = pdf.get_y()
-
-        # -- Stats table (left column) --
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
-
-        if sched.no_referee:
-            stat_widths = [55, 18, 22]
-            stat_headers = ["Squadra", "Partite", "Max Attesa"]
-        else:
-            stat_widths = [35, 18, 20, 22]
-            stat_headers = ["Squadra", "Partite", "Arbitraggi", "Max Attesa"]
-
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.set_fill_color(220, 220, 220)
-        for i, h in enumerate(stat_headers):
-            pdf.cell(stat_widths[i], 7, h, border=1, fill=True)
-        pdf.ln()
-
-        pdf.set_font("Helvetica", "", 8)
-        for team, stat in sched.stats.items():
-            pdf.cell(stat_widths[0], 6, team, border=1)
-            pdf.cell(stat_widths[1], 6, str(stat["played"]), border=1)
-            if not sched.no_referee:
-                pdf.cell(stat_widths[2], 6, str(stat["refereed"]), border=1)
-                pdf.cell(stat_widths[3], 6, f"{stat['max_wait']} min", border=1)
-            else:
-                pdf.cell(stat_widths[2], 6, f"{stat['max_wait']} min", border=1)
-            pdf.ln()
-
-        stats_bottom = pdf.get_y()
-
-        # -- Field diagram (right column) --
-        field_x = pdf.l_margin + stats_table_w + gap
-        field_y = section_top
-
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.set_xy(field_x, field_y)
-        pdf.cell(draw_w, 8, "Dimensioni Campo")
-        field_y += 8
-
-        pdf.set_fill_color(144, 190, 109)
-        pdf.set_draw_color(50, 100, 50)
-        pdf.set_line_width(0.5)
-        pdf.rect(field_x, field_y, draw_w, draw_h, style="DF")
-
-        pdf.set_draw_color(255, 255, 255)
-        pdf.set_line_width(0.3)
-        pdf.dashed_line(
-            field_x + meta_mm, field_y,
-            field_x + meta_mm, field_y + draw_h,
-            dash_length=2, space_length=1.5,
-        )
-        pdf.dashed_line(
-            field_x + draw_w - meta_mm, field_y,
-            field_x + draw_w - meta_mm, field_y + draw_h,
-            dash_length=2, space_length=1.5,
-        )
-
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_font("Helvetica", "B", 7)
-        pdf.set_xy(field_x + 1, field_y + draw_h / 2 - 2)
-        pdf.cell(meta_mm - 2, 4, f"{config.meta}m", align="C")
-        pdf.set_xy(field_x + draw_w - meta_mm + 1, field_y + draw_h / 2 - 2)
-        pdf.cell(meta_mm - 2, 4, f"{config.meta}m", align="C")
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_draw_color(0, 0, 0)
-
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_xy(field_x, field_y + draw_h + 1)
-        pdf.cell(draw_w, 4, config.field_length, align="C")
-        pdf.set_xy(field_x + draw_w + 2, field_y + draw_h / 2 - 2)
-        pdf.cell(20, 4, config.field_width)
-
-        # For U6, list all 3 field formats below the diagram
-        if sched.category == "U6":
-            pdf.set_font("Helvetica", "B", 8)
-            pdf.set_xy(field_x, field_y + draw_h + 6)
-            pdf.cell(draw_w, 5, "Dimensioni variabili in base al numero di giocatori:", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", "", 8)
-            for players, fmt in U6_FIELD_FORMATS.items():
-                pdf.set_x(field_x)
-                pdf.cell(
-                    draw_w, 4,
-                    f"{players} vs {players}:  {fmt['field_width']} \u00d7 {fmt['field_length']}",
-                    new_x="LMARGIN", new_y="NEXT",
-                )
-
-        pdf.set_y(max(stats_bottom, field_y + draw_h + 8) + 4)
-
-        # --- Per-field pages ---
-        field_numbers = sorted({m.field_number for m in sched.matches})
-        for fn in field_numbers:
-            pdf.add_page()
-
-            # Event header
+            # Event header (small, top of each category page)
             if event_name or event_date:
                 parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
                 pdf.set_font("Helvetica", "I", 9)
@@ -418,15 +278,167 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
 
             # Title
             pdf.set_font("Helvetica", "B", 18)
-            pdf.cell(0, 12, f"{sched.category} - Campo {fn}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 12, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "", 10)
+            if sched.half_time_interval > 0:
+                half = sched.match_duration // 2
+                match_desc = (
+                    f"{half} min + {half} min ({sched.half_time_interval} min intervallo)"
+                )
+            else:
+                match_desc = f"{sched.match_duration} min"
+            pdf.cell(
+                0,
+                6,
+                f"{len(sched.stats)} squadre | {len(sched.matches)} partite | "
+                f"{match_desc} + {sched.break_duration} min pausa",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
             pdf.ln(4)
 
-            field_matches = [m for m in sched.matches if m.field_number == fn]
-            _render_field_match_table(pdf, field_matches, sched)
+            # Warnings
+            for w in sched.warnings:
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.cell(0, 5, f"Nota: {w}", new_x="LMARGIN", new_y="NEXT")
+            if sched.warnings:
+                pdf.ln(2)
+
+            _render_match_table(pdf, sched.matches, sched, col_widths, headers)
+
+            pdf.ln(3)
+
+            # --- Stats table (left) + Field diagram (right) side by side ---
+            stats_table_w = 95
+            gap = 10
+            draw_w = 80
+            draw_h = draw_w * config.field_width_max / config.field_length_max
+            meta_mm = draw_w * config.meta / config.field_length_max
+
+            num_teams = len(sched.stats)
+            stats_h = 8 + 8 + num_teams * 7
+            section_h = max(stats_h, draw_h + 20) + 10
+            if pdf.get_y() + section_h > pdf.h - pdf.b_margin:
+                pdf.add_page()
+
+            section_top = pdf.get_y()
+
+            # -- Stats table (left column) --
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(stats_table_w, 8, "Statistiche", new_x="LMARGIN", new_y="NEXT")
+
+            if sched.no_referee:
+                stat_widths = [55, 18, 22]
+                stat_headers = ["Squadra", "Partite", "Max Attesa"]
+            else:
+                stat_widths = [35, 18, 20, 22]
+                stat_headers = ["Squadra", "Partite", "Arbitraggi", "Max Attesa"]
+
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_fill_color(220, 220, 220)
+            for i, h in enumerate(stat_headers):
+                pdf.cell(stat_widths[i], 7, h, border=1, fill=True)
+            pdf.ln()
+
+            pdf.set_font("Helvetica", "", 8)
+            for team, stat in sched.stats.items():
+                pdf.cell(stat_widths[0], 6, team, border=1)
+                pdf.cell(stat_widths[1], 6, str(stat["played"]), border=1)
+                if not sched.no_referee:
+                    pdf.cell(stat_widths[2], 6, str(stat["refereed"]), border=1)
+                    pdf.cell(stat_widths[3], 6, f"{stat['max_wait']} min", border=1)
+                else:
+                    pdf.cell(stat_widths[2], 6, f"{stat['max_wait']} min", border=1)
+                pdf.ln()
+
+            stats_bottom = pdf.get_y()
+
+            # -- Field diagram (right column) --
+            field_x = pdf.l_margin + stats_table_w + gap
+            field_y = section_top
+
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_xy(field_x, field_y)
+            pdf.cell(draw_w, 8, "Dimensioni Campo")
+            field_y += 8
+
+            pdf.set_fill_color(144, 190, 109)
+            pdf.set_draw_color(50, 100, 50)
+            pdf.set_line_width(0.5)
+            pdf.rect(field_x, field_y, draw_w, draw_h, style="DF")
+
+            pdf.set_draw_color(255, 255, 255)
+            pdf.set_line_width(0.3)
+            pdf.dashed_line(
+                field_x + meta_mm, field_y,
+                field_x + meta_mm, field_y + draw_h,
+                dash_length=2, space_length=1.5,
+            )
+            pdf.dashed_line(
+                field_x + draw_w - meta_mm, field_y,
+                field_x + draw_w - meta_mm, field_y + draw_h,
+                dash_length=2, space_length=1.5,
+            )
+
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("Helvetica", "B", 7)
+            pdf.set_xy(field_x + 1, field_y + draw_h / 2 - 2)
+            pdf.cell(meta_mm - 2, 4, f"{config.meta}m", align="C")
+            pdf.set_xy(field_x + draw_w - meta_mm + 1, field_y + draw_h / 2 - 2)
+            pdf.cell(meta_mm - 2, 4, f"{config.meta}m", align="C")
+
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_draw_color(0, 0, 0)
+
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_xy(field_x, field_y + draw_h + 1)
+            pdf.cell(draw_w, 4, config.field_length, align="C")
+            pdf.set_xy(field_x + draw_w + 2, field_y + draw_h / 2 - 2)
+            pdf.cell(20, 4, config.field_width)
+
+            # For U6, list all 3 field formats below the diagram
+            if sched.category == "U6":
+                pdf.set_font("Helvetica", "B", 8)
+                pdf.set_xy(field_x, field_y + draw_h + 6)
+                pdf.cell(draw_w, 5, "Dimensioni variabili in base al numero di giocatori:", new_x="LMARGIN", new_y="NEXT")
+                pdf.set_font("Helvetica", "", 8)
+                for players, fmt in U6_FIELD_FORMATS.items():
+                    pdf.set_x(field_x)
+                    pdf.cell(
+                        draw_w, 4,
+                        f"{players} vs {players}:  {fmt['field_width']} \u00d7 {fmt['field_length']}",
+                        new_x="LMARGIN", new_y="NEXT",
+                    )
+
+            pdf.set_y(max(stats_bottom, field_y + draw_h + 8) + 4)
+
+        # --- Per-field pages ---
+        if include_field:
+            field_numbers = sorted({m.field_number for m in sched.matches})
+            for fn in field_numbers:
+                pdf.add_page()
+
+                # Event header
+                if event_name or event_date:
+                    parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+                    pdf.set_font("Helvetica", "I", 9)
+                    pdf.set_text_color(100, 100, 100)
+                    pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_text_color(0, 0, 0)
+                    pdf.ln(2)
+
+                # Title
+                pdf.set_font("Helvetica", "B", 18)
+                pdf.cell(0, 12, f"{sched.category} - Campo {fn}", new_x="LMARGIN", new_y="NEXT")
+                pdf.ln(4)
+
+                field_matches = [m for m in sched.matches if m.field_number == fn]
+                _render_field_match_table(pdf, field_matches, sched)
 
         # --- Per-team pages ---
-        for team_name in sched.stats:
-            _render_team_page(pdf, team_name, sched, event_name, event_date)
+        if include_team:
+            for team_name in sched.stats:
+                _render_team_page(pdf, team_name, sched, event_name, event_date)
 
     return pdf.output()
 
