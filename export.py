@@ -98,14 +98,14 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 
         # Draw cells without borders
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(col_widths[0], row_h, m.start_time, border=0)
-        pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0)
+        pdf.cell(col_widths[0], row_h, m.start_time, border=0, align="C")
+        pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0, align="C")
         pdf.cell(col_widths[2], row_h, m.team1.upper(), border=0)
         pdf.cell(col_widths[3], row_h, m.team2.upper(), border=0)
-        pdf.cell(col_widths[4], row_h, "", border=0)
-        pdf.cell(col_widths[5], row_h, "", border=0)
+        pdf.cell(col_widths[4], row_h, "", border=0, align="C")
+        pdf.cell(col_widths[5], row_h, "", border=0, align="C")
         if not sched.no_referee:
-            pdf.cell(col_widths[6], row_h, m.referee.upper(), border=0)
+            pdf.cell(col_widths[6], row_h, m.referee.upper(), border=0, align="C")
         pdf.ln()
 
         y_bottom = y_top + row_h
