@@ -1,3 +1,4 @@
+from datetime import datetime
 from io import BytesIO
 
 from flask import Flask, jsonify, render_template, request, send_file
@@ -94,7 +95,6 @@ def save_session_route():
         event_date = form_data.get("event_date", "").strip()
         label = f"{event_name} {event_date}".strip()
     if not label:
-        from datetime import datetime
         label = datetime.now().strftime("%Y-%m-%d %H:%M")
     save_session(label, form_data)
     return jsonify({"ok": True})

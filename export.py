@@ -16,6 +16,36 @@ def _format_date(date_str: str) -> str:
         return date_str
 
 
+def _render_event_header(pdf, event_name, event_date):
+    """Render the small italic event header at the top of a page."""
+    if not event_name and not event_date:
+        return
+    parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(2)
+
+
+def _render_lunch_break(pdf, total_width, sched, row_h=8):
+    """Render the blue PAUSA lunch-break bar."""
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(74, 108, 247)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(
+        total_width,
+        row_h,
+        f"PAUSA  {sched.lunch_break} min",
+        border=0,
+        fill=True,
+        align="C",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+    pdf.set_text_color(0, 0, 0)
+
+
 def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True):
     """Render the match table (header + rows + riposa + lunch break)."""
     pdf.set_font("Helvetica", "B", 10)
@@ -43,20 +73,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
                         new_y="NEXT",
                     )
             if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
-                pdf.set_font("Helvetica", "B", 10)
-                pdf.set_fill_color(74, 108, 247)
-                pdf.set_text_color(255, 255, 255)
-                pdf.cell(
-                    sum(col_widths),
-                    8,
-                    f"PAUSA  {sched.lunch_break} min",
-                    border=0,
-                    fill=True,
-                    align="C",
-                    new_x="LMARGIN",
-                    new_y="NEXT",
-                )
-                pdf.set_text_color(0, 0, 0)
+                _render_lunch_break(pdf, sum(col_widths), sched)
             current_slot = m.time_slot
 
         pdf.set_font("Helvetica", "", 9)
@@ -110,20 +127,7 @@ def _render_field_match_table(pdf, matches, sched):
         if m.time_slot != current_slot:
             if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
                 pdf.set_line_width(thick)
-                pdf.set_font("Helvetica", "B", 10)
-                pdf.set_fill_color(74, 108, 247)
-                pdf.set_text_color(255, 255, 255)
-                pdf.cell(
-                    sum(col_widths),
-                    row_h,
-                    f"PAUSA  {sched.lunch_break} min",
-                    border=0,
-                    fill=True,
-                    align="C",
-                    new_x="LMARGIN",
-                    new_y="NEXT",
-                )
-                pdf.set_text_color(0, 0, 0)
+                _render_lunch_break(pdf, sum(col_widths), sched, row_h=row_h)
             current_slot = m.time_slot
 
         y_start = pdf.get_y()
@@ -161,15 +165,7 @@ def _render_field_match_table(pdf, matches, sched):
 def _render_team_page(pdf, team_name, sched, event_name, event_date):
     """Render a per-team page showing their chronological activity."""
     pdf.add_page()
-
-    # Event header
-    if event_name or event_date:
-        parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
-        pdf.set_font("Helvetica", "I", 9)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(2)
+    _render_event_header(pdf, event_name, event_date)
 
     # Title
     pdf.set_font("Helvetica", "B", 18)
@@ -192,20 +188,7 @@ def _render_team_page(pdf, team_name, sched, event_name, event_date):
     for slot in slots:
         # Lunch break
         if sched.morning_slots > 0 and slot == sched.morning_slots:
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.set_fill_color(74, 108, 247)
-            pdf.set_text_color(255, 255, 255)
-            pdf.cell(
-                sum(col_widths),
-                8,
-                f"PAUSA  {sched.lunch_break} min",
-                border=0,
-                fill=True,
-                align="C",
-                new_x="LMARGIN",
-                new_y="NEXT",
-            )
-            pdf.set_text_color(0, 0, 0)
+            _render_lunch_break(pdf, sum(col_widths), sched)
 
         slot_matches = [m for m in sched.matches if m.time_slot == slot]
         start_time = slot_matches[0].start_time
@@ -266,15 +249,7 @@ def schedule_to_pdf(
 
         if include_main:
             pdf.add_page()
-
-            # Event header (small, top of each category page)
-            if event_name or event_date:
-                parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
-                pdf.set_font("Helvetica", "I", 9)
-                pdf.set_text_color(100, 100, 100)
-                pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
-                pdf.set_text_color(0, 0, 0)
-                pdf.ln(2)
+            _render_event_header(pdf, event_name, event_date)
 
             # Title
             pdf.set_font("Helvetica", "B", 18)
@@ -417,15 +392,7 @@ def schedule_to_pdf(
             field_numbers = sorted({m.field_number for m in sched.matches})
             for fn in field_numbers:
                 pdf.add_page()
-
-                # Event header
-                if event_name or event_date:
-                    parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
-                    pdf.set_font("Helvetica", "I", 9)
-                    pdf.set_text_color(100, 100, 100)
-                    pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
-                    pdf.set_text_color(0, 0, 0)
-                    pdf.ln(2)
+                _render_event_header(pdf, event_name, event_date)
 
                 # Title
                 pdf.set_font("Helvetica", "B", 18)
