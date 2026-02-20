@@ -158,6 +158,89 @@ def _render_field_match_table(pdf, matches, sched):
     pdf.set_line_width(0.2)  # reset default
 
 
+def _render_team_page(pdf, team_name, sched, event_name, event_date):
+    """Render a per-team page showing their chronological activity."""
+    pdf.add_page()
+
+    # Event header
+    if event_name or event_date:
+        parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(2)
+
+    # Title
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 12, f"{sched.category} - {team_name}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    # Table
+    col_widths = [30, 25, 30, 105]
+    headers = ["Orario", "Campo", "Attivita", "Dettagli"]
+
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(220, 220, 220)
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True, align="C")
+    pdf.ln()
+
+    slots = sorted({m.time_slot for m in sched.matches})
+    resting_per_slot = sched.resting_per_slot
+
+    for slot in slots:
+        # Lunch break
+        if sched.morning_slots > 0 and slot == sched.morning_slots:
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_fill_color(74, 108, 247)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(
+                sum(col_widths),
+                8,
+                f"PAUSA  {sched.lunch_break} min",
+                border=0,
+                fill=True,
+                align="C",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+            pdf.set_text_color(0, 0, 0)
+
+        slot_matches = [m for m in sched.matches if m.time_slot == slot]
+        start_time = slot_matches[0].start_time
+
+        activity = ""
+        campo = ""
+        details = ""
+
+        for m in slot_matches:
+            if team_name in (m.team1, m.team2):
+                activity = "Gioca"
+                campo = str(m.field_number)
+                opponent = m.team2 if team_name == m.team1 else m.team1
+                details = f"vs {opponent}"
+                break
+            if not sched.no_referee and m.referee == team_name:
+                activity = "Arbitra"
+                campo = str(m.field_number)
+                details = f"{m.team1} vs {m.team2}"
+                break
+
+        if not activity and team_name in resting_per_slot.get(slot, []):
+            activity = "Riposa"
+
+        if not activity:
+            continue
+
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(col_widths[0], 8, start_time, border=1, align="C")
+        pdf.cell(col_widths[1], 8, campo, border=1, align="C")
+        pdf.cell(col_widths[2], 8, activity, border=1, align="C")
+        pdf.cell(col_widths[3], 8, details, border=1)
+        pdf.ln()
+
+
 def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -340,6 +423,10 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
 
             field_matches = [m for m in sched.matches if m.field_number == fn]
             _render_field_match_table(pdf, field_matches, sched)
+
+        # --- Per-team pages ---
+        for team_name in sched.stats:
+            _render_team_page(pdf, team_name, sched, event_name, event_date)
 
     return pdf.output()
 
