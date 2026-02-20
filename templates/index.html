@@ -11,7 +11,7 @@
 <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1.5rem; background:#f0f4f8; border:1px solid #c8d8e8; border-radius:6px; padding:0.75rem 1rem;">
     <select id="sessionSelect" style="margin:0; flex:1;">
         {% for s in sessions %}
-        <option value="{{ s.id }}">{{ s.label }} &mdash; {{ s.saved_at[:16] | replace("T", " ") }}</option>
+        <option value="{{ s.id }}">{{ s.label }} &mdash; {{ s.saved_at }}</option>
         {% endfor %}
     </select>
     <button type="button" class="outline" onclick="loadSession()"
@@ -165,6 +165,7 @@ const SESSIONS = {{ sessions | tojson }};
 function loadSession() {
     const select = document.getElementById('sessionSelect');
     if (!select) return;
+    if (!confirm('Caricare questa sessione? I dati del modulo verranno sovrascritti.')) return;
     const session = SESSIONS.find(s => s.id === select.value);
     if (!session) return;
     const formData = session.form_data;

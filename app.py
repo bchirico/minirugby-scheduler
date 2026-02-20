@@ -92,10 +92,16 @@ def save_session_route():
     if not label:
         event_name = form_data.get("event_name", "").strip()
         event_date = form_data.get("event_date", "").strip()
+        if event_date:
+            try:
+                from datetime import datetime as _dt
+                event_date = _dt.strptime(event_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                pass
         label = f"{event_name} {event_date}".strip()
     if not label:
         from datetime import datetime
-        label = datetime.now().strftime("%Y-%m-%d %H:%M")
+        label = datetime.now().strftime("%d-%m-%Y %H:%M")
     save_session(label, form_data)
     return jsonify({"ok": True})
 
