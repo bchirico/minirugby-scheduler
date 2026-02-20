@@ -61,7 +61,7 @@ def _render_table_headers(pdf, col_widths, headers):
     pdf.ln()
 
 
-def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True):
+def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True, show_field=True):
     """Render the match table (header + rows + riposa + lunch break)."""
     _render_table_headers(pdf, col_widths, headers)
 
@@ -125,14 +125,16 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 
         # Draw cells without borders
         pdf.set_font("Helvetica", "", 8)
-        pdf.cell(col_widths[0], row_h, m.start_time, border=0, align="C")
-        pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0, align="C")
-        pdf.cell(col_widths[2], row_h, m.team1.upper(), border=0)
-        pdf.cell(col_widths[3], row_h, m.team2.upper(), border=0)
-        pdf.cell(col_widths[4], row_h, "", border=0, align="C")
-        pdf.cell(col_widths[5], row_h, "", border=0, align="C")
+        ci = 0
+        pdf.cell(col_widths[ci], row_h, m.start_time, border=0, align="C"); ci += 1
+        if show_field:
+            pdf.cell(col_widths[ci], row_h, f"Campo {m.field_number}", border=0, align="C"); ci += 1
+        pdf.cell(col_widths[ci], row_h, m.team1.upper(), border=0); ci += 1
+        pdf.cell(col_widths[ci], row_h, m.team2.upper(), border=0); ci += 1
+        pdf.cell(col_widths[ci], row_h, "", border=0, align="C"); ci += 1
+        pdf.cell(col_widths[ci], row_h, "", border=0, align="C"); ci += 1
         if not sched.no_referee:
-            pdf.cell(col_widths[6], row_h, m.referee.upper(), border=0, align="C")
+            pdf.cell(col_widths[ci], row_h, m.referee.upper(), border=0, align="C")
         pdf.ln()
 
         y_bottom = y_top + row_h
@@ -178,64 +180,6 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
                 new_y="NEXT",
             )
 
-
-def _render_field_match_table(pdf, matches, sched):
-    """Render per-field table with two rows per match (one per team) + Risultato/Punti."""
-    if sched.no_referee:
-        col_widths = [30, 80, 40, 40]
-        headers = ["Orario", "Squadra", "Risultato", "Punti"]
-    else:
-        col_widths = [25, 35, 60, 35, 35]
-        headers = ["Orario", "Arbitro", "Squadra", "Risultato", "Punti"]
-    row_h = 8
-    thick = 0.4
-    thin = 0.15
-
-    pdf.set_line_width(thick)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.set_fill_color(220, 220, 220)
-    for i, h in enumerate(headers):
-        pdf.cell(col_widths[i], row_h, h, border=1, fill=True, align="C")
-    pdf.ln()
-
-    current_slot = -1
-    for m in matches:
-        if m.time_slot != current_slot:
-            if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
-                pdf.set_line_width(thick)
-                _render_lunch_break(pdf, sum(col_widths), sched, row_h=row_h)
-            current_slot = m.time_slot
-
-        y_start = pdf.get_y()
-        pdf.set_font("Helvetica", "", 9)
-
-        # Spanning cells: Orario (and Arbitro if present)
-        pdf.set_line_width(thick)
-        pdf.cell(col_widths[0], row_h * 2, m.start_time, border=1, align="C")
-        if not sched.no_referee:
-            pdf.cell(col_widths[1], row_h * 2, m.referee, border=1, align="C")
-        x_team = pdf.get_x()
-
-        # Team 1 row — thick on top/left/right, no bottom
-        pdf.cell(col_widths[-3], row_h, m.team1, border="LTR")
-        pdf.cell(col_widths[-2], row_h, "", border="LTR")
-        pdf.cell(col_widths[-1], row_h, "", border="LTR")
-
-        # Thin horizontal separator between the two team rows
-        pdf.set_line_width(thin)
-        x_end = x_team + sum(col_widths[-3:])
-        pdf.line(x_team, y_start + row_h, x_end, y_start + row_h)
-
-        # Team 2 row — thick on bottom/left/right, no top
-        pdf.set_xy(x_team, y_start + row_h)
-        pdf.set_line_width(thick)
-        pdf.cell(col_widths[-3], row_h, m.team2, border="LBR")
-        pdf.cell(col_widths[-2], row_h, "", border="LBR")
-        pdf.cell(col_widths[-1], row_h, "", border="LBR")
-
-        pdf.set_xy(pdf.l_margin, y_start + row_h * 2)
-
-    pdf.set_line_width(0.2)  # reset default
 
 
 def _render_team_page(pdf, team_name, sched, event_name, event_date):
@@ -465,6 +409,13 @@ def schedule_to_pdf(
 
         # --- Per-field pages ---
         if include_field:
+            if sched.no_referee:
+                field_col_widths = [15, 65, 65, 18, 18]
+                field_headers = ["Orario", "Squadra A", "Squadra B", "Risultato (mete)"]
+            else:
+                field_col_widths = [15, 45, 45, 18, 18, 50]
+                field_headers = ["Orario", "Squadra A", "Squadra B", "Risultato (mete)", "Arbitro"]
+
             field_numbers = sorted({m.field_number for m in sched.matches})
             for fn in field_numbers:
                 pdf.add_page()
@@ -476,7 +427,8 @@ def schedule_to_pdf(
                 pdf.ln(4)
 
                 field_matches = [m for m in sched.matches if m.field_number == fn]
-                _render_field_match_table(pdf, field_matches, sched)
+                _render_match_table(pdf, field_matches, sched, field_col_widths, field_headers,
+                                    show_resting=False, show_field=False)
 
         # --- Per-team pages ---
         if include_team:
