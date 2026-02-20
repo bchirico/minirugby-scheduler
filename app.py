@@ -1,3 +1,4 @@
+from datetime import datetime
 from io import BytesIO
 
 from flask import Flask, jsonify, render_template, request, send_file
@@ -100,8 +101,7 @@ def save_session_route():
                 pass
         label = f"{event_name} {event_date}".strip()
     if not label:
-        from datetime import datetime
-        label = datetime.now().strftime("%d-%m-%Y %H:%M")
+        label = datetime.now().strftime("%Y-%m-%d %H:%M")
     save_session(label, form_data)
     return jsonify({"ok": True})
 
@@ -133,7 +133,13 @@ def download_pdf():
     schedules = generate_all(request.form)
     event_name = request.form.get("event_name", "").strip()
     event_date = request.form.get("event_date", "").strip()
-    pdf_bytes = schedule_to_pdf(schedules, event_name, event_date)
+    include_main = request.form.get("pdf_main", "1") == "1"
+    include_field = request.form.get("pdf_field", "1") == "1"
+    include_team = request.form.get("pdf_team", "1") == "1"
+    pdf_bytes = schedule_to_pdf(
+        schedules, event_name, event_date,
+        include_main=include_main, include_field=include_field, include_team=include_team,
+    )
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",

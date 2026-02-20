@@ -9,7 +9,7 @@
 </form>
 
 <div class="grid" style="margin-bottom: 1rem;">
-    <button onclick="submitDownload('/download/pdf')">Scarica PDF</button>
+    <button onclick="document.getElementById('pdfDialog').showModal()">Scarica PDF</button>
     <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
     <button onclick="goBack()" class="outline">Torna al Modulo</button>
 </div>
@@ -112,6 +112,19 @@
     </table>
 </article>
 {% endfor %}
+
+<dialog id="pdfDialog">
+    <article>
+        <h3>Scarica PDF</h3>
+        <label><input type="checkbox" id="pdfMain" checked> Vista principale</label>
+        <label><input type="checkbox" id="pdfField" checked> Vista per campo</label>
+        <label><input type="checkbox" id="pdfTeam" checked> Vista per squadra</label>
+        <footer class="grid">
+            <button class="outline" onclick="document.getElementById('pdfDialog').close()">Annulla</button>
+            <button onclick="confirmPdfDownload()">Scarica</button>
+        </footer>
+    </article>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
@@ -130,6 +143,22 @@ function submitDownload(url) {
     const form = document.getElementById('downloadForm');
     form.action = url;
     form.submit();
+}
+
+function confirmPdfDownload() {
+    const form = document.getElementById('downloadForm');
+    // Remove any previous pdf_* inputs
+    form.querySelectorAll('input[name^="pdf_"]').forEach(el => el.remove());
+    // Add checkbox values
+    ['Main', 'Field', 'Team'].forEach(name => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'pdf_' + name.toLowerCase();
+        input.value = document.getElementById('pdf' + name).checked ? '1' : '0';
+        form.appendChild(input);
+    });
+    document.getElementById('pdfDialog').close();
+    submitDownload('/download/pdf');
 }
 
 function saveSession() {
