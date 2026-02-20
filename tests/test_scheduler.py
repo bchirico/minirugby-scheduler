@@ -476,7 +476,9 @@ class TestComputeStats:
         referee_counts = {0: 1, 1: 1, 2: 1}
         # slot_duration=15, break_duration=5
         # max_wait = (gap - 1) * slot_duration + break_duration
-        stats = _compute_stats(3, ["A", "B", "C"], matches, referee_counts, 15, break_duration=5)
+        stats = _compute_stats(
+            3, ["A", "B", "C"], matches, referee_counts, 15, break_duration=5
+        )
         # A plays slots 0,1 -> gap 1 -> (1-1)*15 + 5 = 5 min
         assert stats["A"]["max_wait"] == 5
         # B plays slots 0,3 -> gap 3 -> (3-1)*15 + 5 = 35 min
@@ -489,30 +491,44 @@ class TestLunchBreak:
     def test_morning_slots_half_split(self):
         """With split='half' and 8 total slots, morning_slots = ceil(8/2) = 4."""
         req = ScheduleRequest(
-            category="U10", num_teams=6, num_fields=2, start_time="09:00",
-            lunch_break=60, split_ratio="half",
+            category="U10",
+            num_teams=6,
+            num_fields=2,
+            start_time="09:00",
+            lunch_break=60,
+            split_ratio="half",
         )
         sched = generate_schedule(req)
         total_slots = len(set(m.time_slot for m in sched.matches))
         import math
+
         assert sched.morning_slots == math.ceil(total_slots / 2)
 
     def test_morning_slots_two_thirds_split(self):
         """With split='two_thirds', morning_slots = ceil(total * 2/3)."""
         req = ScheduleRequest(
-            category="U10", num_teams=6, num_fields=2, start_time="09:00",
-            lunch_break=60, split_ratio="two_thirds",
+            category="U10",
+            num_teams=6,
+            num_fields=2,
+            start_time="09:00",
+            lunch_break=60,
+            split_ratio="two_thirds",
         )
         sched = generate_schedule(req)
         total_slots = len(set(m.time_slot for m in sched.matches))
         import math
+
         assert sched.morning_slots == math.ceil(total_slots * 2 / 3)
 
     def test_no_split_when_lunch_break_zero(self):
         """Without lunch_break, morning_slots stays 0."""
         req = ScheduleRequest(
-            category="U10", num_teams=6, num_fields=2, start_time="09:00",
-            lunch_break=0, split_ratio="half",
+            category="U10",
+            num_teams=6,
+            num_fields=2,
+            start_time="09:00",
+            lunch_break=0,
+            split_ratio="half",
         )
         sched = generate_schedule(req)
         assert sched.morning_slots == 0
@@ -522,23 +538,35 @@ class TestLunchBreak:
         # U8: slot_duration=15, match=10, break=5
         # 3 teams, 1 field -> 3 slots. With half split: morning_slots=2, afternoon=1
         req = ScheduleRequest(
-            category="U8", num_teams=3, num_fields=1, start_time="09:00",
-            match_duration=10, break_duration=5,
-            lunch_break=60, split_ratio="half",
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            match_duration=10,
+            break_duration=5,
+            lunch_break=60,
+            split_ratio="half",
         )
         sched = generate_schedule(req)
         # morning slot 0: 09:00, morning slot 1: 09:15
         # afternoon slot 2 (without lunch): 09:30
         # afternoon slot 2 (with lunch 60, offset=60-5=55): 09:30 + 55 = 10:25
-        afternoon_matches = [m for m in sched.matches if m.time_slot >= sched.morning_slots]
+        afternoon_matches = [
+            m for m in sched.matches if m.time_slot >= sched.morning_slots
+        ]
         assert afternoon_matches[0].start_time == "10:25"
 
     def test_lunch_break_replaces_ordinary_break(self):
         """The gap between last morning and first afternoon equals lunch_break, not break_duration."""
         req = ScheduleRequest(
-            category="U8", num_teams=3, num_fields=1, start_time="09:00",
-            match_duration=10, break_duration=5,
-            lunch_break=30, split_ratio="half",
+            category="U8",
+            num_teams=3,
+            num_fields=1,
+            start_time="09:00",
+            match_duration=10,
+            break_duration=5,
+            lunch_break=30,
+            split_ratio="half",
         )
         sched = generate_schedule(req)
         last_morning = max(
@@ -550,6 +578,7 @@ class TestLunchBreak:
             key=lambda m: m.time_slot,
         )
         from datetime import datetime
+
         t_last = datetime.strptime(last_morning.start_time, "%H:%M")
         t_first = datetime.strptime(first_afternoon.start_time, "%H:%M")
         gap = int((t_first - t_last).total_seconds() / 60)
