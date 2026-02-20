@@ -16,13 +16,13 @@ from scheduler import (
 
 class TestRoundRobinOrder:
     def test_generates_correct_number_of_pairs(self):
-        for n in range(3, 9):
+        for n in range(3, 11):
             rounds = round_robin_order(n)
             all_pairs = [p for r in rounds for p in r]
             assert len(all_pairs) == n * (n - 1) // 2
 
     def test_all_pairs_unique(self):
-        for n in range(3, 9):
+        for n in range(3, 11):
             rounds = round_robin_order(n)
             all_pairs = [p for r in rounds for p in r]
             assert len(all_pairs) == len(set(all_pairs))
@@ -34,7 +34,7 @@ class TestRoundRobinOrder:
                 assert t1 < t2
 
     def test_no_team_appears_twice_in_round(self):
-        for n in range(3, 9):
+        for n in range(3, 11):
             rounds = round_robin_order(n)
             for r in rounds:
                 teams = [t for pair in r for t in pair]
@@ -43,7 +43,7 @@ class TestRoundRobinOrder:
 
 class TestGenerateSchedule:
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     def test_correct_number_of_matches(self, category, num_teams, num_fields):
         req = ScheduleRequest(
@@ -56,7 +56,7 @@ class TestGenerateSchedule:
         assert len(sched.matches) == num_teams * (num_teams - 1) // 2
 
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     def test_no_duplicate_matchups(self, category, num_teams, num_fields):
         req = ScheduleRequest(
@@ -73,7 +73,7 @@ class TestGenerateSchedule:
             pairs.add(pair)
 
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     def test_no_playing_conflicts(self, category, num_teams, num_fields):
         req = ScheduleRequest(
@@ -95,7 +95,7 @@ class TestGenerateSchedule:
             )
 
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     def test_no_time_conflicts_dedicated(self, category, num_teams, num_fields):
         req = ScheduleRequest(
@@ -116,7 +116,7 @@ class TestGenerateSchedule:
             assert len(teams) == len(set(teams)), f"Time conflict in slot {slot_idx}"
 
     @pytest.mark.parametrize("category", ["U8", "U10", "U12"])
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     def test_referee_not_playing_dedicated(self, category, num_teams, num_fields):
         req = ScheduleRequest(
@@ -131,7 +131,7 @@ class TestGenerateSchedule:
             assert m.referee != m.team1
             assert m.referee != m.team2
 
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     def test_all_teams_play_correct_count(self, num_teams):
         req = ScheduleRequest(
             category="U8", num_teams=num_teams, num_fields=2, start_time="09:00"
@@ -140,7 +140,7 @@ class TestGenerateSchedule:
         for team, stat in sched.stats.items():
             assert stat["played"] == num_teams - 1
 
-    @pytest.mark.parametrize("num_teams", range(3, 9))
+    @pytest.mark.parametrize("num_teams", range(3, 11))
     @pytest.mark.parametrize("num_fields", [1, 2, 3])
     @pytest.mark.parametrize("dedicated_referees", [True, False])
     def test_referee_duties_distributed_evenly(
@@ -333,7 +333,7 @@ class TestResolveTeamNames:
 
 class TestOrderedPairs:
     def test_covers_all_pairs(self):
-        for n in range(3, 9):
+        for n in range(3, 11):
             pairs = _ordered_pairs(n)
             assert set(pairs) == set(combinations(range(n), 2))
 
