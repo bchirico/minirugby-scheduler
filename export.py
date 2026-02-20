@@ -48,15 +48,15 @@ def _render_lunch_break(pdf, total_width, sched, row_h=8):
 
 def _render_table_headers(pdf, col_widths, headers):
     """Render the table header row."""
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_font("Helvetica", "B", 9)
     pdf.set_fill_color(220, 220, 220)
     col_idx = 0
     for i, h in enumerate(headers):
         if h == "Risultato (mete)":
-            pdf.cell(col_widths[col_idx] + col_widths[col_idx + 1], 8, h, border=1, fill=True, align="C")
+            pdf.cell(col_widths[col_idx] + col_widths[col_idx + 1], 7, h, border=1, fill=True, align="C")
             col_idx += 2
         else:
-            pdf.cell(col_widths[col_idx], 8, h, border=1, fill=True, align="C")
+            pdf.cell(col_widths[col_idx], 7, h, border=1, fill=True, align="C")
             col_idx += 1
     pdf.ln()
 
@@ -65,7 +65,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
     """Render the match table (header + rows + riposa + lunch break)."""
     _render_table_headers(pdf, col_widths, headers)
 
-    row_h = 8
+    row_h = 7
     total_w = sum(col_widths)
     page_bottom = pdf.h - pdf.b_margin
 
@@ -85,11 +85,11 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             if current_slot >= 0 and show_resting:
                 resting = resting_per_slot.get(current_slot, [])
                 if resting:
-                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.set_font("Helvetica", "I", 7)
                     pdf.set_fill_color(248, 248, 248)
                     pdf.cell(
                         sum(col_widths),
-                        5,
+                        4,
                         f"Riposa: {', '.join(resting)}",
                         border=1,
                         fill=True,
@@ -107,7 +107,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             # Check if the entire new slot fits on the current page
             slot_count = slot_match_counts[m.time_slot]
             has_resting = bool(resting_per_slot.get(m.time_slot))
-            slot_height = slot_count * row_h + (5 if show_resting and has_resting else 0)
+            slot_height = slot_count * row_h + (4 if show_resting and has_resting else 0)
             if pdf.get_y() + slot_height > page_bottom:
                 pdf.add_page()
                 _render_table_headers(pdf, col_widths, headers)
@@ -124,7 +124,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         x_left = pdf.l_margin
 
         # Draw cells without borders
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("Helvetica", "", 8)
         pdf.cell(col_widths[0], row_h, m.start_time, border=0, align="C")
         pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0, align="C")
         pdf.cell(col_widths[2], row_h, m.team1.upper(), border=0)
@@ -166,11 +166,11 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
     if show_resting and current_slot >= 0:
         resting = resting_per_slot.get(current_slot, [])
         if resting:
-            pdf.set_font("Helvetica", "I", 8)
+            pdf.set_font("Helvetica", "I", 7)
             pdf.set_fill_color(248, 248, 248)
             pdf.cell(
                 sum(col_widths),
-                5,
+                4,
                 f"Riposa: {', '.join(resting)}",
                 border=1,
                 fill=True,
@@ -310,7 +310,7 @@ def schedule_to_pdf(
     include_team: bool = True,
 ) -> bytes:
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=10)
 
     for sched in schedules:
         config = CATEGORIES[sched.category]
@@ -328,8 +328,8 @@ def schedule_to_pdf(
             _render_event_header(pdf, event_name, event_date)
 
             # Title
-            pdf.set_font("Helvetica", "B", 18)
-            pdf.cell(0, 12, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(0, 10, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("Helvetica", "", 10)
             if sched.half_time_interval > 0:
                 half = sched.match_duration // 2
@@ -357,7 +357,7 @@ def schedule_to_pdf(
 
             _render_match_table(pdf, sched.matches, sched, col_widths, headers)
 
-            pdf.ln(3)
+            pdf.ln(5)
 
             # --- Stats table (left) + Field diagram (right) side by side ---
             stats_table_w = 95
@@ -367,8 +367,8 @@ def schedule_to_pdf(
             meta_mm = draw_w * config.meta / config.field_length_max
 
             num_teams = len(sched.stats)
-            stats_h = 8 + 8 + num_teams * 7
-            section_h = max(stats_h, draw_h + 20) + 10
+            stats_h = 8 + 7 + num_teams * 6
+            section_h = max(stats_h, draw_h + 18) + 5
             if pdf.get_y() + section_h > pdf.h - pdf.b_margin:
                 pdf.add_page()
 
