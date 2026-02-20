@@ -93,6 +93,12 @@ def save_session_route():
     if not label:
         event_name = form_data.get("event_name", "").strip()
         event_date = form_data.get("event_date", "").strip()
+        if event_date:
+            try:
+                from datetime import datetime as _dt
+                event_date = _dt.strptime(event_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                pass
         label = f"{event_name} {event_date}".strip()
     if not label:
         label = datetime.now().strftime("%Y-%m-%d %H:%M")

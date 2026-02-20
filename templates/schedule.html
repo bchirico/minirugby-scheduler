@@ -11,7 +11,7 @@
 <div class="grid" style="margin-bottom: 1rem;">
     <button onclick="document.getElementById('pdfDialog').showModal()">Scarica PDF</button>
     <button onclick="submitDownload('/download/excel')" class="secondary">Scarica Excel</button>
-    <button onclick="history.back()" class="outline">Torna al Modulo</button>
+    <button onclick="goBack()" class="outline">Torna al Modulo</button>
 </div>
 
 <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1.5rem;">
@@ -129,6 +129,16 @@
 
 {% block scripts %}
 <script>
+let sessionSaved = false;
+
+function goBack() {
+    if (sessionSaved) {
+        window.location.href = '/';
+    } else {
+        history.back();
+    }
+}
+
 function submitDownload(url) {
     const form = document.getElementById('downloadForm');
     form.action = url;
@@ -152,6 +162,7 @@ function confirmPdfDownload() {
 }
 
 function saveSession() {
+    if (!confirm('Salvare la sessione corrente?')) return;
     const label = document.getElementById('sessionLabel').value.trim();
     const formData = {};
     document.querySelectorAll('#downloadForm input[type="hidden"]').forEach(input => {
@@ -163,6 +174,7 @@ function saveSession() {
         body: JSON.stringify({label, form_data: formData})
     }).then(r => r.json()).then(data => {
         if (data.ok) {
+            sessionSaved = true;
             const msg = document.getElementById('saveMsg');
             msg.style.display = '';
             setTimeout(() => { msg.style.display = 'none'; }, 3000);
