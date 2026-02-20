@@ -19,7 +19,7 @@ def save_session(label: str, form_data: dict) -> None:
     sessions.insert(0, {
         "id": now.strftime("%Y%m%d%H%M%S%f"),
         "label": label,
-        "saved_at": now.isoformat(timespec="minutes"),
+        "saved_at": now.strftime("%d-%m-%Y %H:%M"),
         "form_data": form_data,
     })
     sessions = sessions[:MAX_SESSIONS]
