@@ -50,11 +50,15 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
     """Render the match table (header + rows + riposa + lunch break)."""
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(220, 220, 220)
+    # "Risultato (mete)" spans 2 col_widths, so headers may be shorter than col_widths
+    col_idx = 0
     for i, h in enumerate(headers):
-        if i == len(headers) - 1:
-            pdf.cell(sum(col_widths[i:]), 8, h, border=1, fill=True, align="C")
+        if h == "Risultato (mete)":
+            pdf.cell(col_widths[col_idx] + col_widths[col_idx + 1], 8, h, border=1, fill=True, align="C")
+            col_idx += 2
         else:
-            pdf.cell(col_widths[i], 8, h, border=1, fill=True, align="C")
+            pdf.cell(col_widths[col_idx], 8, h, border=1, fill=True, align="C")
+            col_idx += 1
     pdf.ln()
 
     resting_per_slot = sched.resting_per_slot
@@ -96,12 +100,12 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(col_widths[0], row_h, m.start_time, border=0)
         pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0)
-        pdf.cell(col_widths[2], row_h, m.team1, border=0)
-        pdf.cell(col_widths[3], row_h, m.team2, border=0)
+        pdf.cell(col_widths[2], row_h, m.team1.upper(), border=0)
+        pdf.cell(col_widths[3], row_h, m.team2.upper(), border=0)
+        pdf.cell(col_widths[4], row_h, "", border=0)
+        pdf.cell(col_widths[5], row_h, "", border=0)
         if not sched.no_referee:
-            pdf.cell(col_widths[4], row_h, m.referee, border=0)
-        pdf.cell(col_widths[-2], row_h, "", border=0)
-        pdf.cell(col_widths[-1], row_h, "", border=0)
+            pdf.cell(col_widths[6], row_h, m.referee.upper(), border=0)
         pdf.ln()
 
         y_bottom = y_top + row_h
@@ -290,11 +294,11 @@ def schedule_to_pdf(
 
         # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [15, 20, 60, 60, 17, 18]
+            col_widths = [15, 20, 60, 60, 18, 18]
             headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato (mete)"]
         else:
-            col_widths = [15, 20, 45, 45, 30, 17, 18]
-            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Arbitro", "Risultato (mete)"]
+            col_widths = [15, 20, 40, 40, 18, 18, 40]
+            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato (mete)", "Arbitro"]
 
         if include_main:
             pdf.add_page()
