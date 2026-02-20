@@ -240,10 +240,10 @@ def schedule_to_pdf(
 
         # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [25, 60, 75, 30]
+            col_widths = [15, 20, 125, 30]
             headers = ["Orario", "Campo", "Partita", "Risultato"]
         else:
-            col_widths = [25, 50, 55, 30, 30]
+            col_widths = [15, 20, 95, 30, 30]
             headers = ["Orario", "Campo", "Partita", "Arbitro", "Risultato"]
 
         if include_main:
