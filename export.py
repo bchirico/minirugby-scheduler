@@ -63,11 +63,11 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
 
         # Match table — Arbitro column omitted when no_referee
         if sched.no_referee:
-            col_widths = [20, 25, 65, 80]  # #, Time, Field, Match
-            headers = ["#", "Orario", "Campo", "Partita"]
+            col_widths = [15, 25, 55, 65, 30]  # #, Time, Field, Match, Result
+            headers = ["#", "Orario", "Campo", "Partita", "Risultato"]
         else:
-            col_widths = [20, 25, 55, 55, 35]  # #, Time, Field, Match, Referee
-            headers = ["#", "Orario", "Campo", "Partita", "Arbitro"]
+            col_widths = [15, 25, 45, 50, 25, 30]  # #, Time, Field, Match, Referee, Result
+            headers = ["#", "Orario", "Campo", "Partita", "Arbitro", "Risultato"]
 
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_fill_color(220, 220, 220)
@@ -113,12 +113,13 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
                 current_slot = m.time_slot
 
             pdf.set_font("Helvetica", "", 9)
-            pdf.cell(col_widths[0], 6, str(m.match_number), border=1)
-            pdf.cell(col_widths[1], 6, m.start_time, border=1)
-            pdf.cell(col_widths[2], 6, f"Campo {m.field_number}", border=1)
-            pdf.cell(col_widths[3], 6, f"{m.team1} vs {m.team2}", border=1)
+            pdf.cell(col_widths[0], 8, str(m.match_number), border=1)
+            pdf.cell(col_widths[1], 8, m.start_time, border=1)
+            pdf.cell(col_widths[2], 8, f"Campo {m.field_number}", border=1)
+            pdf.cell(col_widths[3], 8, f"{m.team1} vs {m.team2}", border=1)
             if not sched.no_referee:
-                pdf.cell(col_widths[4], 6, m.referee, border=1)
+                pdf.cell(col_widths[4], 8, m.referee, border=1)
+            pdf.cell(col_widths[-1], 8, "", border=1)
             pdf.ln()
 
         # Riposa row for the last slot
