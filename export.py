@@ -196,7 +196,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 def _render_team_page(pdf, team_name, sched, event_name, event_date):
     """Render a per-team page showing their chronological activity."""
     pdf.add_page()
-    _render_title_with_event(pdf, f"{sched.category} - {team_name}", event_name, event_date)
+    _render_title_with_event(pdf, f"{sched.category} - {team_name.upper()}", event_name, event_date)
     pdf.ln(2)
 
     # Table
@@ -226,19 +226,19 @@ def _render_team_page(pdf, team_name, sched, event_name, event_date):
 
         for m in slot_matches:
             if team_name in (m.team1, m.team2):
-                activity = "Gioca"
+                activity = "GIOCA"
                 campo = str(m.field_number)
                 opponent = m.team2 if team_name == m.team1 else m.team1
-                details = f"vs {opponent}"
+                details = f"vs {opponent.upper()}"
                 break
             if not sched.no_referee and m.referee == team_name:
-                activity = "Arbitra"
+                activity = "ARBITRA"
                 campo = str(m.field_number)
-                details = f"{m.team1} vs {m.team2}"
+                details = f"{m.team1.upper()} vs {m.team2.upper()}"
                 break
 
         if not activity and team_name in resting_per_slot.get(slot, []):
-            activity = "Riposa"
+            activity = "RIPOSA"
 
         if not activity:
             continue
