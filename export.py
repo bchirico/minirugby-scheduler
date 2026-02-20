@@ -16,6 +16,76 @@ def _format_date(date_str: str) -> str:
         return date_str
 
 
+def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True):
+    """Render the match table (header + rows + riposa + lunch break)."""
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(220, 220, 220)
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True)
+    pdf.ln()
+
+    resting_per_slot = sched.resting_per_slot
+    current_slot = -1
+    for m in matches:
+        if m.time_slot != current_slot:
+            if show_resting and current_slot >= 0:
+                resting = resting_per_slot.get(current_slot, [])
+                if resting:
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.set_fill_color(248, 248, 248)
+                    pdf.cell(
+                        sum(col_widths),
+                        5,
+                        f"Riposa: {', '.join(resting)}",
+                        border=1,
+                        fill=True,
+                        new_x="LMARGIN",
+                        new_y="NEXT",
+                    )
+            if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_fill_color(74, 108, 247)
+                pdf.set_text_color(255, 255, 255)
+                pdf.cell(
+                    sum(col_widths),
+                    8,
+                    f"PAUSA  {sched.lunch_break} min",
+                    border=0,
+                    fill=True,
+                    align="C",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
+                )
+                pdf.set_text_color(0, 0, 0)
+            current_slot = m.time_slot
+
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(col_widths[0], 8, str(m.match_number), border=1)
+        pdf.cell(col_widths[1], 8, m.start_time, border=1)
+        pdf.cell(col_widths[2], 8, f"Campo {m.field_number}", border=1)
+        pdf.cell(col_widths[3], 8, f"{m.team1} vs {m.team2}", border=1)
+        if not sched.no_referee:
+            pdf.cell(col_widths[4], 8, m.referee, border=1)
+        pdf.cell(col_widths[-1], 8, "", border=1)
+        pdf.ln()
+
+    # Riposa row for the last slot
+    if show_resting and current_slot >= 0:
+        resting = resting_per_slot.get(current_slot, [])
+        if resting:
+            pdf.set_font("Helvetica", "I", 8)
+            pdf.set_fill_color(248, 248, 248)
+            pdf.cell(
+                sum(col_widths),
+                5,
+                f"Riposa: {', '.join(resting)}",
+                border=1,
+                fill=True,
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+
+
 def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -69,74 +139,7 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
             col_widths = [15, 25, 45, 50, 25, 30]  # #, Time, Field, Match, Referee, Result
             headers = ["#", "Orario", "Campo", "Partita", "Arbitro", "Risultato"]
 
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_fill_color(220, 220, 220)
-        for i, h in enumerate(headers):
-            pdf.cell(col_widths[i], 8, h, border=1, fill=True)
-        pdf.ln()
-
-        resting_per_slot = sched.resting_per_slot
-        current_slot = -1
-        for m in sched.matches:
-            if m.time_slot != current_slot:
-                if current_slot >= 0:
-                    # Riposa row for the slot that just ended
-                    resting = resting_per_slot.get(current_slot, [])
-                    if resting:
-                        pdf.set_font("Helvetica", "I", 8)
-                        pdf.set_fill_color(248, 248, 248)
-                        pdf.cell(
-                            sum(col_widths),
-                            5,
-                            f"Riposa: {', '.join(resting)}",
-                            border=1,
-                            fill=True,
-                            new_x="LMARGIN",
-                            new_y="NEXT",
-                        )
-                # Lunch break row between morning and afternoon
-                if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
-                    pdf.set_font("Helvetica", "B", 10)
-                    pdf.set_fill_color(74, 108, 247)
-                    pdf.set_text_color(255, 255, 255)
-                    pdf.cell(
-                        sum(col_widths),
-                        8,
-                        f"PAUSA  {sched.lunch_break} min",
-                        border=0,
-                        fill=True,
-                        align="C",
-                        new_x="LMARGIN",
-                        new_y="NEXT",
-                    )
-                    pdf.set_text_color(0, 0, 0)
-                current_slot = m.time_slot
-
-            pdf.set_font("Helvetica", "", 9)
-            pdf.cell(col_widths[0], 8, str(m.match_number), border=1)
-            pdf.cell(col_widths[1], 8, m.start_time, border=1)
-            pdf.cell(col_widths[2], 8, f"Campo {m.field_number}", border=1)
-            pdf.cell(col_widths[3], 8, f"{m.team1} vs {m.team2}", border=1)
-            if not sched.no_referee:
-                pdf.cell(col_widths[4], 8, m.referee, border=1)
-            pdf.cell(col_widths[-1], 8, "", border=1)
-            pdf.ln()
-
-        # Riposa row for the last slot
-        if current_slot >= 0:
-            resting = resting_per_slot.get(current_slot, [])
-            if resting:
-                pdf.set_font("Helvetica", "I", 8)
-                pdf.set_fill_color(248, 248, 248)
-                pdf.cell(
-                    sum(col_widths),
-                    5,
-                    f"Riposa: {', '.join(resting)}",
-                    border=1,
-                    fill=True,
-                    new_x="LMARGIN",
-                    new_y="NEXT",
-                )
+        _render_match_table(pdf, sched.matches, sched, col_widths, headers)
 
         pdf.ln(3)
 
@@ -243,6 +246,28 @@ def schedule_to_pdf(schedules: list[Schedule], event_name: str = "", event_date:
                 )
 
         pdf.set_y(max(stats_bottom, field_y + draw_h + 8) + 4)
+
+        # --- Per-field pages ---
+        field_numbers = sorted({m.field_number for m in sched.matches})
+        for fn in field_numbers:
+            pdf.add_page()
+
+            # Event header
+            if event_name or event_date:
+                parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_text_color(100, 100, 100)
+                pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
+                pdf.set_text_color(0, 0, 0)
+                pdf.ln(2)
+
+            # Title
+            pdf.set_font("Helvetica", "B", 18)
+            pdf.cell(0, 12, f"Campo {fn} - {sched.category}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(4)
+
+            field_matches = [m for m in sched.matches if m.field_number == fn]
+            _render_match_table(pdf, field_matches, sched, col_widths, headers, show_resting=False)
 
     return pdf.output()
 
