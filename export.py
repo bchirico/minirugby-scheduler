@@ -46,11 +46,10 @@ def _render_lunch_break(pdf, total_width, sched, row_h=8):
     pdf.set_text_color(0, 0, 0)
 
 
-def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True):
-    """Render the match table (header + rows + riposa + lunch break)."""
+def _render_table_headers(pdf, col_widths, headers):
+    """Render the table header row."""
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(220, 220, 220)
-    # "Risultato (mete)" spans 2 col_widths, so headers may be shorter than col_widths
     col_idx = 0
     for i, h in enumerate(headers):
         if h == "Risultato (mete)":
@@ -61,30 +60,59 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             col_idx += 1
     pdf.ln()
 
+
+def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True):
+    """Render the match table (header + rows + riposa + lunch break)."""
+    _render_table_headers(pdf, col_widths, headers)
+
+    row_h = 8
+    total_w = sum(col_widths)
+    page_bottom = pdf.h - pdf.b_margin
+
     resting_per_slot = sched.resting_per_slot
     match_list = list(matches)
+    # Pre-compute number of matches per slot for height estimation
+    slot_match_counts: dict[int, int] = {}
+    for m_ in match_list:
+        slot_match_counts[m_.time_slot] = slot_match_counts.get(m_.time_slot, 0) + 1
+
     current_slot = -1
     for idx, m in enumerate(match_list):
         is_first_in_slot = (idx == 0 or match_list[idx - 1].time_slot != m.time_slot)
 
         if is_first_in_slot:
-            if current_slot >= 0:
-                if show_resting:
-                    resting = resting_per_slot.get(current_slot, [])
-                    if resting:
-                        pdf.set_font("Helvetica", "I", 8)
-                        pdf.set_fill_color(248, 248, 248)
-                        pdf.cell(
-                            sum(col_widths),
-                            5,
-                            f"Riposa: {', '.join(resting)}",
-                            border=1,
-                            fill=True,
-                            new_x="LMARGIN",
-                            new_y="NEXT",
-                        )
+            # Render riposa for the previous slot
+            if current_slot >= 0 and show_resting:
+                resting = resting_per_slot.get(current_slot, [])
+                if resting:
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.set_fill_color(248, 248, 248)
+                    pdf.cell(
+                        sum(col_widths),
+                        5,
+                        f"Riposa: {', '.join(resting)}",
+                        border=1,
+                        fill=True,
+                        new_x="LMARGIN",
+                        new_y="NEXT",
+                    )
+
+            # Lunch break
             if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
+                if pdf.get_y() + 10 > page_bottom:
+                    pdf.add_page()
+                    _render_table_headers(pdf, col_widths, headers)
                 _render_lunch_break(pdf, sum(col_widths), sched)
+
+            # Check if the entire new slot fits on the current page
+            slot_count = slot_match_counts[m.time_slot]
+            has_resting = bool(resting_per_slot.get(m.time_slot))
+            slot_height = slot_count * row_h + (5 if show_resting and has_resting else 0)
+            if pdf.get_y() + slot_height > page_bottom:
+                pdf.add_page()
+                _render_table_headers(pdf, col_widths, headers)
+                is_first_in_slot = True
+
             current_slot = m.time_slot
 
         is_last_in_slot = (
@@ -94,7 +122,6 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 
         y_top = pdf.get_y()
         x_left = pdf.l_margin
-        row_h = 8
 
         # Draw cells without borders
         pdf.set_font("Helvetica", "", 9)
@@ -109,7 +136,6 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         pdf.ln()
 
         y_bottom = y_top + row_h
-        total_w = sum(col_widths)
 
         # Horizontal lines: black at slot boundaries, light gray inside
         pdf.set_draw_color(0, 0, 0)
@@ -127,15 +153,12 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             pdf.set_draw_color(0, 0, 0)
 
         # Vertical lines: black for outer edges, light gray for internal
-        # Left edge (black)
         pdf.line(x_left, y_top, x_left, y_bottom)
-        # Internal column separators (light gray)
         pdf.set_draw_color(200, 200, 200)
         x = x_left
         for cw in col_widths[:-1]:
             x += cw
             pdf.line(x, y_top, x, y_bottom)
-        # Right edge (black)
         pdf.set_draw_color(0, 0, 0)
         pdf.line(x_left + total_w, y_top, x_left + total_w, y_bottom)
 
