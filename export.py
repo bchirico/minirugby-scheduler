@@ -16,16 +16,27 @@ def _format_date(date_str: str) -> str:
         return date_str
 
 
-def _render_event_header(pdf, event_name, event_date):
-    """Render the small italic event header at the top of a page."""
-    if not event_name and not event_date:
-        return
-    parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
-    pdf.set_font("Helvetica", "I", 9)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(0, 5, " - ".join(parts), new_x="LMARGIN", new_y="NEXT")
-    pdf.set_text_color(0, 0, 0)
-    pdf.ln(2)
+def _render_title_with_event(pdf, title, event_name, event_date):
+    """Render page title (left, bold) with event name/date (right, italic gray) on same line."""
+    y = pdf.get_y()
+    x_left = pdf.l_margin
+    page_w = pdf.w - pdf.l_margin - pdf.r_margin
+    h = 10
+
+    # Title on the left
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(page_w / 2, h, title)
+
+    # Event info on the right
+    if event_name or event_date:
+        parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.set_text_color(100, 100, 100)
+        pdf.set_xy(x_left + page_w / 2, y)
+        pdf.cell(page_w / 2, h, " - ".join(parts), align="R")
+        pdf.set_text_color(0, 0, 0)
+
+    pdf.set_xy(x_left, y + h)
 
 
 def _render_lunch_break(pdf, total_width, sched, row_h=8):
@@ -185,12 +196,8 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 def _render_team_page(pdf, team_name, sched, event_name, event_date):
     """Render a per-team page showing their chronological activity."""
     pdf.add_page()
-    _render_event_header(pdf, event_name, event_date)
-
-    # Title
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 12, f"{sched.category} - {team_name}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(4)
+    _render_title_with_event(pdf, f"{sched.category} - {team_name}", event_name, event_date)
+    pdf.ln(2)
 
     # Table
     col_widths = [30, 25, 30, 105]
@@ -269,11 +276,7 @@ def schedule_to_pdf(
 
         if include_main:
             pdf.add_page()
-            _render_event_header(pdf, event_name, event_date)
-
-            # Title
-            pdf.set_font("Helvetica", "B", 14)
-            pdf.cell(0, 10, f"Calendario {sched.category}", new_x="LMARGIN", new_y="NEXT")
+            _render_title_with_event(pdf, f"Calendario {sched.category}", event_name, event_date)
             pdf.set_font("Helvetica", "", 10)
             if sched.half_time_interval > 0:
                 half = sched.match_duration // 2
@@ -290,14 +293,14 @@ def schedule_to_pdf(
                 new_x="LMARGIN",
                 new_y="NEXT",
             )
-            pdf.ln(4)
+            pdf.ln(2)
 
             # Warnings
             for w in sched.warnings:
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.cell(0, 5, f"Nota: {w}", new_x="LMARGIN", new_y="NEXT")
             if sched.warnings:
-                pdf.ln(2)
+                pdf.ln(1)
 
             _render_match_table(pdf, sched.matches, sched, col_widths, headers)
 
@@ -419,12 +422,8 @@ def schedule_to_pdf(
             field_numbers = sorted({m.field_number for m in sched.matches})
             for fn in field_numbers:
                 pdf.add_page()
-                _render_event_header(pdf, event_name, event_date)
-
-                # Title
-                pdf.set_font("Helvetica", "B", 18)
-                pdf.cell(0, 12, f"{sched.category} - Campo {fn}", new_x="LMARGIN", new_y="NEXT")
-                pdf.ln(4)
+                _render_title_with_event(pdf, f"{sched.category} - Campo {fn}", event_name, event_date)
+                pdf.ln(2)
 
                 field_matches = [m for m in sched.matches if m.field_number == fn]
                 _render_match_table(pdf, field_matches, sched, field_col_widths, field_headers,
