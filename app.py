@@ -96,6 +96,7 @@ def save_session_route():
         if event_date:
             try:
                 from datetime import datetime as _dt
+
                 event_date = _dt.strptime(event_date, "%Y-%m-%d").strftime("%d-%m-%Y")
             except ValueError:
                 pass
@@ -137,8 +138,12 @@ def download_pdf():
     include_field = request.form.get("pdf_field", "1") == "1"
     include_team = request.form.get("pdf_team", "1") == "1"
     pdf_bytes = schedule_to_pdf(
-        schedules, event_name, event_date,
-        include_main=include_main, include_field=include_field, include_team=include_team,
+        schedules,
+        event_name,
+        event_date,
+        include_main=include_main,
+        include_field=include_field,
+        include_team=include_team,
     )
     return send_file(
         BytesIO(pdf_bytes),

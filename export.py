@@ -29,7 +29,9 @@ def _render_title_with_event(pdf, title, event_name, event_date):
 
     # Event info on the right
     if event_name or event_date:
-        parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+        parts = [
+            p for p in [event_name, _format_date(event_date) if event_date else ""] if p
+        ]
         pdf.set_font("Helvetica", "I", 10)
         pdf.set_text_color(100, 100, 100)
         pdf.set_xy(x_left + page_w / 2, y)
@@ -64,7 +66,14 @@ def _render_table_headers(pdf, col_widths, headers):
     col_idx = 0
     for i, h in enumerate(headers):
         if h == "Risultato (mete)":
-            pdf.cell(col_widths[col_idx] + col_widths[col_idx + 1], 7, h, border=1, fill=True, align="C")
+            pdf.cell(
+                col_widths[col_idx] + col_widths[col_idx + 1],
+                7,
+                h,
+                border=1,
+                fill=True,
+                align="C",
+            )
             col_idx += 2
         else:
             pdf.cell(col_widths[col_idx], 7, h, border=1, fill=True, align="C")
@@ -72,7 +81,9 @@ def _render_table_headers(pdf, col_widths, headers):
     pdf.ln()
 
 
-def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_resting=True, show_field=True):
+def _render_match_table(
+    pdf, matches, sched, col_widths, headers, *, show_resting=True, show_field=True
+):
     """Render the match table (header + rows + riposa + lunch break)."""
     _render_table_headers(pdf, col_widths, headers)
 
@@ -89,7 +100,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
 
     current_slot = -1
     for idx, m in enumerate(match_list):
-        is_first_in_slot = (idx == 0 or match_list[idx - 1].time_slot != m.time_slot)
+        is_first_in_slot = idx == 0 or match_list[idx - 1].time_slot != m.time_slot
 
         if is_first_in_slot:
             # Render riposa for the previous slot
@@ -118,7 +129,9 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             # Check if the entire new slot fits on the current page
             slot_count = slot_match_counts[m.time_slot]
             has_resting = bool(resting_per_slot.get(m.time_slot))
-            slot_height = slot_count * row_h + (4 if show_resting and has_resting else 0)
+            slot_height = slot_count * row_h + (
+                4 if show_resting and has_resting else 0
+            )
             if pdf.get_y() + slot_height > page_bottom:
                 pdf.add_page()
                 _render_table_headers(pdf, col_widths, headers)
@@ -127,8 +140,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             current_slot = m.time_slot
 
         is_last_in_slot = (
-            idx == len(match_list) - 1
-            or match_list[idx + 1].time_slot != m.time_slot
+            idx == len(match_list) - 1 or match_list[idx + 1].time_slot != m.time_slot
         )
 
         y_top = pdf.get_y()
@@ -137,13 +149,21 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         # Draw cells without borders
         pdf.set_font("Helvetica", "", 8)
         ci = 0
-        pdf.cell(col_widths[ci], row_h, m.start_time, border=0, align="C"); ci += 1
+        pdf.cell(col_widths[ci], row_h, m.start_time, border=0, align="C")
+        ci += 1
         if show_field:
-            pdf.cell(col_widths[ci], row_h, f"Campo {m.field_number}", border=0, align="C"); ci += 1
-        pdf.cell(col_widths[ci], row_h, m.team1.upper(), border=0); ci += 1
-        pdf.cell(col_widths[ci], row_h, m.team2.upper(), border=0); ci += 1
-        pdf.cell(col_widths[ci], row_h, "", border=0, align="C"); ci += 1
-        pdf.cell(col_widths[ci], row_h, "", border=0, align="C"); ci += 1
+            pdf.cell(
+                col_widths[ci], row_h, f"Campo {m.field_number}", border=0, align="C"
+            )
+            ci += 1
+        pdf.cell(col_widths[ci], row_h, m.team1.upper(), border=0)
+        ci += 1
+        pdf.cell(col_widths[ci], row_h, m.team2.upper(), border=0)
+        ci += 1
+        pdf.cell(col_widths[ci], row_h, "", border=0, align="C")
+        ci += 1
+        pdf.cell(col_widths[ci], row_h, "", border=0, align="C")
+        ci += 1
         if not sched.no_referee:
             pdf.cell(col_widths[ci], row_h, m.referee.upper(), border=0, align="C")
         pdf.ln()
@@ -192,11 +212,12 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             )
 
 
-
 def _render_team_page(pdf, team_name, sched, event_name, event_date):
     """Render a per-team page showing their chronological activity."""
     pdf.add_page()
-    _render_title_with_event(pdf, f"{sched.category} - {team_name.upper()}", event_name, event_date)
+    _render_title_with_event(
+        pdf, f"{sched.category} - {team_name.upper()}", event_name, event_date
+    )
     pdf.ln(2)
 
     # Table
@@ -272,17 +293,24 @@ def schedule_to_pdf(
             headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato (mete)"]
         else:
             col_widths = [15, 20, 40, 40, 18, 18, 40]
-            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato (mete)", "Arbitro"]
+            headers = [
+                "Orario",
+                "Campo",
+                "Squadra A",
+                "Squadra B",
+                "Risultato (mete)",
+                "Arbitro",
+            ]
 
         if include_main:
             pdf.add_page()
-            _render_title_with_event(pdf, f"Calendario {sched.category}", event_name, event_date)
+            _render_title_with_event(
+                pdf, f"Calendario {sched.category}", event_name, event_date
+            )
             pdf.set_font("Helvetica", "", 10)
             if sched.half_time_interval > 0:
                 half = sched.match_duration // 2
-                match_desc = (
-                    f"{half} min + {half} min ({sched.half_time_interval} min intervallo)"
-                )
+                match_desc = f"{half} min + {half} min ({sched.half_time_interval} min intervallo)"
             else:
                 match_desc = f"{sched.match_duration} min"
             pdf.cell(
@@ -368,14 +396,20 @@ def schedule_to_pdf(
             pdf.set_draw_color(255, 255, 255)
             pdf.set_line_width(0.3)
             pdf.dashed_line(
-                field_x + meta_mm, field_y,
-                field_x + meta_mm, field_y + draw_h,
-                dash_length=2, space_length=1.5,
+                field_x + meta_mm,
+                field_y,
+                field_x + meta_mm,
+                field_y + draw_h,
+                dash_length=2,
+                space_length=1.5,
             )
             pdf.dashed_line(
-                field_x + draw_w - meta_mm, field_y,
-                field_x + draw_w - meta_mm, field_y + draw_h,
-                dash_length=2, space_length=1.5,
+                field_x + draw_w - meta_mm,
+                field_y,
+                field_x + draw_w - meta_mm,
+                field_y + draw_h,
+                dash_length=2,
+                space_length=1.5,
             )
 
             pdf.set_text_color(255, 255, 255)
@@ -398,14 +432,22 @@ def schedule_to_pdf(
             if sched.category == "U6":
                 pdf.set_font("Helvetica", "B", 8)
                 pdf.set_xy(field_x, field_y + draw_h + 6)
-                pdf.cell(draw_w, 5, "Dimensioni variabili in base al numero di giocatori:", new_x="LMARGIN", new_y="NEXT")
+                pdf.cell(
+                    draw_w,
+                    5,
+                    "Dimensioni variabili in base al numero di giocatori:",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
+                )
                 pdf.set_font("Helvetica", "", 8)
                 for players, fmt in U6_FIELD_FORMATS.items():
                     pdf.set_x(field_x)
                     pdf.cell(
-                        draw_w, 4,
+                        draw_w,
+                        4,
                         f"{players} vs {players}:  {fmt['field_width']} \u00d7 {fmt['field_length']}",
-                        new_x="LMARGIN", new_y="NEXT",
+                        new_x="LMARGIN",
+                        new_y="NEXT",
                     )
 
             pdf.set_y(max(stats_bottom, field_y + draw_h + 8) + 4)
@@ -417,17 +459,32 @@ def schedule_to_pdf(
                 field_headers = ["Orario", "Squadra A", "Squadra B", "Risultato (mete)"]
             else:
                 field_col_widths = [15, 45, 45, 18, 18, 50]
-                field_headers = ["Orario", "Squadra A", "Squadra B", "Risultato (mete)", "Arbitro"]
+                field_headers = [
+                    "Orario",
+                    "Squadra A",
+                    "Squadra B",
+                    "Risultato (mete)",
+                    "Arbitro",
+                ]
 
             field_numbers = sorted({m.field_number for m in sched.matches})
             for fn in field_numbers:
                 pdf.add_page()
-                _render_title_with_event(pdf, f"{sched.category} - Campo {fn}", event_name, event_date)
+                _render_title_with_event(
+                    pdf, f"{sched.category} - Campo {fn}", event_name, event_date
+                )
                 pdf.ln(2)
 
                 field_matches = [m for m in sched.matches if m.field_number == fn]
-                _render_match_table(pdf, field_matches, sched, field_col_widths, field_headers,
-                                    show_resting=False, show_field=False)
+                _render_match_table(
+                    pdf,
+                    field_matches,
+                    sched,
+                    field_col_widths,
+                    field_headers,
+                    show_resting=False,
+                    show_field=False,
+                )
 
         # --- Per-team pages ---
         if include_team:
@@ -437,7 +494,9 @@ def schedule_to_pdf(
     return pdf.output()
 
 
-def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_date: str = "") -> bytes:
+def schedule_to_excel(
+    schedules: list[Schedule], event_name: str = "", event_date: str = ""
+) -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -451,7 +510,11 @@ def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_dat
 
         # Event header
         if event_name or event_date:
-            header_parts = [p for p in [event_name, _format_date(event_date) if event_date else ""] if p]
+            header_parts = [
+                p
+                for p in [event_name, _format_date(event_date) if event_date else ""]
+                if p
+            ]
             ws.append([" - ".join(header_parts)])
             ws.cell(ws.max_row, 1).font = Font(bold=True, size=13)
             ws.append([])
@@ -469,7 +532,9 @@ def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_dat
         resting_per_slot_xl = sched.resting_per_slot
         current_slot_xl = -1
         num_cols = len(headers)
-        lunch_fill = PatternFill(start_color="4A6CF7", end_color="4A6CF7", fill_type="solid")
+        lunch_fill = PatternFill(
+            start_color="4A6CF7", end_color="4A6CF7", fill_type="solid"
+        )
         for m in sched.matches:
             if m.time_slot != current_slot_xl:
                 if current_slot_xl >= 0:
@@ -486,7 +551,13 @@ def schedule_to_excel(schedules: list[Schedule], event_name: str = "", event_dat
                         cell.font = Font(bold=True, color="FFFFFF")
                         cell.fill = lunch_fill
                 current_slot_xl = m.time_slot
-            row = [m.match_number, m.start_time, f"Campo {m.field_number}", m.team1, m.team2]
+            row = [
+                m.match_number,
+                m.start_time,
+                f"Campo {m.field_number}",
+                m.team1,
+                m.team2,
+            ]
             if not sched.no_referee:
                 row.append(m.referee)
             ws.append(row)

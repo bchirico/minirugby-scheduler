@@ -290,7 +290,11 @@ def _build_matches(
     base_time = datetime.strptime(start_time, "%H:%M")
     # Afternoon slots start later by (lunch_break - break_duration):
     # the ordinary break after the last morning match is replaced by lunch_break.
-    afternoon_offset = timedelta(minutes=lunch_break - break_duration) if morning_slots > 0 and lunch_break > 0 else timedelta(0)
+    afternoon_offset = (
+        timedelta(minutes=lunch_break - break_duration)
+        if morning_slots > 0 and lunch_break > 0
+        else timedelta(0)
+    )
     matches = []
     match_num = 1
 
@@ -382,10 +386,17 @@ def generate_schedule(request: ScheduleRequest) -> Schedule:
             morning_slots = math.ceil(len(slots) * 2 / 3)
 
     matches = _build_matches(
-        slots, team_names, request.start_time, slot_duration,
-        morning_slots, lunch_break, break_duration,
+        slots,
+        team_names,
+        request.start_time,
+        slot_duration,
+        morning_slots,
+        lunch_break,
+        break_duration,
     )
-    stats = _compute_stats(n, team_names, matches, referee_counts, slot_duration, break_duration)
+    stats = _compute_stats(
+        n, team_names, matches, referee_counts, slot_duration, break_duration
+    )
 
     # Check time overrun (per-team total play time)
     time_overrun_warning = None

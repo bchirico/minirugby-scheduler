@@ -18,9 +18,27 @@ RECOMMENDED_MATCH_TIMES = {
 
 # U6 field dimensions vary by match format (players per side)
 U6_FIELD_FORMATS = {
-    3: {"field_width": "5m",  "field_length": "15m", "field_width_max": 5,  "field_length_max": 15, "meta": 2},
-    4: {"field_width": "10m", "field_length": "22m", "field_width_max": 10, "field_length_max": 22, "meta": 2},
-    5: {"field_width": "15m", "field_length": "22m", "field_width_max": 15, "field_length_max": 22, "meta": 2},
+    3: {
+        "field_width": "5m",
+        "field_length": "15m",
+        "field_width_max": 5,
+        "field_length_max": 15,
+        "meta": 2,
+    },
+    4: {
+        "field_width": "10m",
+        "field_length": "22m",
+        "field_width_max": 10,
+        "field_length_max": 22,
+        "meta": 2,
+    },
+    5: {
+        "field_width": "15m",
+        "field_length": "22m",
+        "field_width_max": 15,
+        "field_length_max": 22,
+        "meta": 2,
+    },
 }
 
 
