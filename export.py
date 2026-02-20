@@ -77,12 +77,11 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
             current_slot = m.time_slot
 
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(col_widths[0], 8, str(m.match_number), border=1)
-        pdf.cell(col_widths[1], 8, m.start_time, border=1)
-        pdf.cell(col_widths[2], 8, f"Campo {m.field_number}", border=1)
-        pdf.cell(col_widths[3], 8, f"{m.team1} vs {m.team2}", border=1)
+        pdf.cell(col_widths[0], 8, m.start_time, border=1)
+        pdf.cell(col_widths[1], 8, f"Campo {m.field_number}", border=1)
+        pdf.cell(col_widths[2], 8, f"{m.team1} vs {m.team2}", border=1)
         if not sched.no_referee:
-            pdf.cell(col_widths[4], 8, m.referee, border=1)
+            pdf.cell(col_widths[3], 8, m.referee, border=1)
         pdf.cell(col_widths[-1], 8, "", border=1)
         pdf.ln()
 
@@ -241,11 +240,11 @@ def schedule_to_pdf(
 
         # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [15, 25, 55, 65, 30]
-            headers = ["#", "Orario", "Campo", "Partita", "Risultato"]
+            col_widths = [25, 60, 75, 30]
+            headers = ["Orario", "Campo", "Partita", "Risultato"]
         else:
-            col_widths = [15, 25, 45, 50, 25, 30]
-            headers = ["#", "Orario", "Campo", "Partita", "Arbitro", "Risultato"]
+            col_widths = [25, 50, 55, 30, 30]
+            headers = ["Orario", "Campo", "Partita", "Arbitro", "Risultato"]
 
         if include_main:
             pdf.add_page()
