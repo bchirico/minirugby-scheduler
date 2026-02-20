@@ -79,9 +79,10 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(col_widths[0], 8, m.start_time, border=1)
         pdf.cell(col_widths[1], 8, f"Campo {m.field_number}", border=1)
-        pdf.cell(col_widths[2], 8, f"{m.team1} vs {m.team2}", border=1)
+        pdf.cell(col_widths[2], 8, m.team1, border=1)
+        pdf.cell(col_widths[3], 8, m.team2, border=1)
         if not sched.no_referee:
-            pdf.cell(col_widths[3], 8, m.referee, border=1)
+            pdf.cell(col_widths[4], 8, m.referee, border=1)
         pdf.cell(col_widths[-1], 8, "", border=1)
         pdf.ln()
 
@@ -240,11 +241,11 @@ def schedule_to_pdf(
 
         # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [15, 20, 125, 30]
-            headers = ["Orario", "Campo", "Partita", "Risultato"]
+            col_widths = [15, 20, 60, 60, 35]
+            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato"]
         else:
-            col_widths = [15, 20, 95, 30, 30]
-            headers = ["Orario", "Campo", "Partita", "Arbitro", "Risultato"]
+            col_widths = [15, 20, 45, 45, 30, 35]
+            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Arbitro", "Risultato"]
 
         if include_main:
             pdf.add_page()
