@@ -51,7 +51,10 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(220, 220, 220)
     for i, h in enumerate(headers):
-        pdf.cell(col_widths[i], 8, h, border=1, fill=True)
+        if i == len(headers) - 1:
+            pdf.cell(sum(col_widths[i:]), 8, h, border=1, fill=True, align="C")
+        else:
+            pdf.cell(col_widths[i], 8, h, border=1, fill=True, align="C")
     pdf.ln()
 
     resting_per_slot = sched.resting_per_slot
@@ -83,6 +86,7 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
         pdf.cell(col_widths[3], 8, m.team2, border=1)
         if not sched.no_referee:
             pdf.cell(col_widths[4], 8, m.referee, border=1)
+        pdf.cell(col_widths[-2], 8, "", border=1)
         pdf.cell(col_widths[-1], 8, "", border=1)
         pdf.ln()
 
@@ -241,11 +245,11 @@ def schedule_to_pdf(
 
         # Column widths needed by both main and field pages
         if sched.no_referee:
-            col_widths = [15, 20, 60, 60, 35]
-            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato"]
+            col_widths = [15, 20, 60, 60, 17, 18]
+            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Risultato (mete)"]
         else:
-            col_widths = [15, 20, 45, 45, 30, 35]
-            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Arbitro", "Risultato"]
+            col_widths = [15, 20, 45, 45, 30, 17, 18]
+            headers = ["Orario", "Campo", "Squadra A", "Squadra B", "Arbitro", "Risultato (mete)"]
 
         if include_main:
             pdf.add_page()
