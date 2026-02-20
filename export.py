@@ -58,37 +58,82 @@ def _render_match_table(pdf, matches, sched, col_widths, headers, *, show_restin
     pdf.ln()
 
     resting_per_slot = sched.resting_per_slot
+    match_list = list(matches)
     current_slot = -1
-    for m in matches:
-        if m.time_slot != current_slot:
-            if show_resting and current_slot >= 0:
-                resting = resting_per_slot.get(current_slot, [])
-                if resting:
-                    pdf.set_font("Helvetica", "I", 8)
-                    pdf.set_fill_color(248, 248, 248)
-                    pdf.cell(
-                        sum(col_widths),
-                        5,
-                        f"Riposa: {', '.join(resting)}",
-                        border=1,
-                        fill=True,
-                        new_x="LMARGIN",
-                        new_y="NEXT",
-                    )
+    for idx, m in enumerate(match_list):
+        is_first_in_slot = (idx == 0 or match_list[idx - 1].time_slot != m.time_slot)
+
+        if is_first_in_slot:
+            if current_slot >= 0:
+                if show_resting:
+                    resting = resting_per_slot.get(current_slot, [])
+                    if resting:
+                        pdf.set_font("Helvetica", "I", 8)
+                        pdf.set_fill_color(248, 248, 248)
+                        pdf.cell(
+                            sum(col_widths),
+                            5,
+                            f"Riposa: {', '.join(resting)}",
+                            border=1,
+                            fill=True,
+                            new_x="LMARGIN",
+                            new_y="NEXT",
+                        )
             if sched.morning_slots > 0 and m.time_slot == sched.morning_slots:
                 _render_lunch_break(pdf, sum(col_widths), sched)
             current_slot = m.time_slot
 
+        is_last_in_slot = (
+            idx == len(match_list) - 1
+            or match_list[idx + 1].time_slot != m.time_slot
+        )
+
+        y_top = pdf.get_y()
+        x_left = pdf.l_margin
+        row_h = 8
+
+        # Draw cells without borders
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(col_widths[0], 8, m.start_time, border=1)
-        pdf.cell(col_widths[1], 8, f"Campo {m.field_number}", border=1)
-        pdf.cell(col_widths[2], 8, m.team1, border=1)
-        pdf.cell(col_widths[3], 8, m.team2, border=1)
+        pdf.cell(col_widths[0], row_h, m.start_time, border=0)
+        pdf.cell(col_widths[1], row_h, f"Campo {m.field_number}", border=0)
+        pdf.cell(col_widths[2], row_h, m.team1, border=0)
+        pdf.cell(col_widths[3], row_h, m.team2, border=0)
         if not sched.no_referee:
-            pdf.cell(col_widths[4], 8, m.referee, border=1)
-        pdf.cell(col_widths[-2], 8, "", border=1)
-        pdf.cell(col_widths[-1], 8, "", border=1)
+            pdf.cell(col_widths[4], row_h, m.referee, border=0)
+        pdf.cell(col_widths[-2], row_h, "", border=0)
+        pdf.cell(col_widths[-1], row_h, "", border=0)
         pdf.ln()
+
+        y_bottom = y_top + row_h
+        total_w = sum(col_widths)
+
+        # Horizontal lines: black at slot boundaries, light gray inside
+        pdf.set_draw_color(0, 0, 0)
+        if is_first_in_slot:
+            pdf.line(x_left, y_top, x_left + total_w, y_top)
+        else:
+            pdf.set_draw_color(200, 200, 200)
+            pdf.line(x_left, y_top, x_left + total_w, y_top)
+            pdf.set_draw_color(0, 0, 0)
+        if is_last_in_slot:
+            pdf.line(x_left, y_bottom, x_left + total_w, y_bottom)
+        else:
+            pdf.set_draw_color(200, 200, 200)
+            pdf.line(x_left, y_bottom, x_left + total_w, y_bottom)
+            pdf.set_draw_color(0, 0, 0)
+
+        # Vertical lines: black for outer edges, light gray for internal
+        # Left edge (black)
+        pdf.line(x_left, y_top, x_left, y_bottom)
+        # Internal column separators (light gray)
+        pdf.set_draw_color(200, 200, 200)
+        x = x_left
+        for cw in col_widths[:-1]:
+            x += cw
+            pdf.line(x, y_top, x, y_bottom)
+        # Right edge (black)
+        pdf.set_draw_color(0, 0, 0)
+        pdf.line(x_left + total_w, y_top, x_left + total_w, y_bottom)
 
     # Riposa row for the last slot
     if show_resting and current_slot >= 0:
