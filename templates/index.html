@@ -56,7 +56,7 @@
             <label>
                 Numero di squadre
                 <select name="{{ cat }}_num_teams" class="team-count-select calc-trigger" data-category="{{ cat }}">
-                    {% for n in range(3, 9) %}
+                    {% for n in range(3, 11) %}
                     <option value="{{ n }}" {% if n == 6 %}selected{% endif %}>{{ n }}</option>
                     {% endfor %}
                 </select>
@@ -122,8 +122,8 @@
 
         <fieldset id="{{ cat }}_team_names">
             <legend>Nomi squadre (opzionale)</legend>
-            <div class="grid" id="{{ cat }}_names_grid">
-                {% for i in range(1, 9) %}
+            <div id="{{ cat }}_names_grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
+                {% for i in range(1, 11) %}
                 <input type="text" name="{{ cat }}_team_{{ i }}" placeholder="Squadra {{ i }}"
                        class="{{ cat }}-team-input" {% if i > 6 %}style="display:none"{% endif %}>
                 {% endfor %}
