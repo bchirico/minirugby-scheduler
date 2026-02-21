@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from io import BytesIO
 
@@ -12,11 +13,38 @@ from models import (
 )
 from scheduler import generate_schedule
 from export import schedule_to_pdf, schedule_to_excel
-from sessions import load_sessions, save_session
+from sessions import load_sessions, save_session, clear_sessions
 
 app = Flask(__name__)
 
 CATEGORY_ORDER = ["U6", "U8", "U10", "U12"]
+
+
+def _make_download_name(event_name: str, event_date: str, suffix: str, ext: str) -> str:
+    parts = []
+    if event_name:
+        parts.append(re.sub(r"[^\w\s-]", "", event_name).strip().replace(" ", "_"))
+    if event_date:
+        try:
+            parts.append(datetime.strptime(event_date, "%Y-%m-%d").strftime("%d-%m-%Y"))
+        except ValueError:
+            parts.append(event_date)
+    base = "_".join(parts) if parts else "torneo"
+    if suffix:
+        base = f"{base}_{suffix}"
+    return f"{base}.{ext}"
+
+
+def _pdf_suffix(include_main: bool, include_field: bool, include_team: bool) -> str:
+    if include_main and not include_field and not include_team:
+        return ""
+    if include_main and include_field and include_team:
+        return "full"
+    if not include_main and include_field and not include_team:
+        return "fields"
+    if not include_main and not include_field and include_team:
+        return "teams"
+    return "custom"
 
 
 def parse_form(form) -> list[ScheduleRequest]:
@@ -84,6 +112,12 @@ def index():
     )
 
 
+@app.route("/delete-sessions", methods=["POST"])
+def delete_sessions_route():
+    clear_sessions()
+    return jsonify({"ok": True})
+
+
 @app.route("/save-session", methods=["POST"])
 def save_session_route():
     data = request.get_json(silent=True) or {}
@@ -144,11 +178,13 @@ def download_pdf():
         include_field=include_field,
         include_team=include_team,
     )
+    suffix = _pdf_suffix(include_main, include_field, include_team)
+    filename = _make_download_name(event_name, event_date, suffix, "pdf")
     return send_file(
         BytesIO(pdf_bytes),
         mimetype="application/pdf",
         as_attachment=True,
-        download_name="tournament.pdf",
+        download_name=filename,
     )
 
 
@@ -158,11 +194,12 @@ def download_excel():
     event_name = request.form.get("event_name", "").strip()
     event_date = request.form.get("event_date", "").strip()
     excel_bytes = schedule_to_excel(schedules, event_name, event_date)
+    filename = _make_download_name(event_name, event_date, "", "xlsx")
     return send_file(
         BytesIO(excel_bytes),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
-        download_name="tournament.xlsx",
+        download_name=filename,
     )
 
 
