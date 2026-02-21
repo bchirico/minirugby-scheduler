@@ -16,6 +16,8 @@
     </select>
     <button type="button" class="outline" onclick="loadSession()"
             style="white-space:nowrap; width:auto; margin:0;">Carica</button>
+    <button type="button" class="outline" onclick="deleteAllSessions()"
+            style="white-space:nowrap; width:auto; margin:0; color:#dc3545; border-color:#dc3545;">🗑️ Cancella tutto</button>
 </div>
 {% endif %}
 
@@ -81,10 +83,18 @@
                     {% endfor %}
                 </select>
             </label>
-            <label>
-                Orario di inizio
-                <input type="time" name="{{ cat }}_start_time" value="09:00">
-            </label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin:0;">
+                <label style="margin:0;">
+                    Orario inizio
+                    <input type="time" name="{{ cat }}_start_time" value="09:00"
+                           class="start-time-input" data-category="{{ cat }}">
+                </label>
+                <label style="margin:0;">
+                    Orario fine
+                    <input type="time" id="{{ cat }}_end_time" readonly
+                           style="background:#f0f4f8; cursor:default; color:#555;">
+                </label>
+            </div>
         </div>
 
         <div style="background: #e8f4f8; border: 1px solid #bee5eb; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
@@ -226,6 +236,40 @@ function recalculate(cat) {
     document.getElementById(`${cat}_break_duration`).value = breakDuration;
 
     checkOverrun(cat);
+    updateEndTime(cat);
+}
+
+// Compute end time for a category based on current form values
+function computeEndTime(cat) {
+    const numTeams = parseInt(document.querySelector(`[name="${cat}_num_teams"]`).value);
+    const numFields = parseInt(document.querySelector(`[name="${cat}_num_fields"]`).value);
+    const startTime = document.querySelector(`[name="${cat}_start_time"]`).value;
+    const matchDuration = parseInt(document.getElementById(`${cat}_match_duration`).value) || 0;
+    const breakDuration = parseInt(document.getElementById(`${cat}_break_duration`).value) || 0;
+    const lunchBreak = parseInt(document.getElementById(`${cat}_lunch_break`)?.value) || 0;
+    const halfTimeEl = document.getElementById(`${cat}_half_time_interval`);
+    const halfTimeInterval = halfTimeEl ? (parseInt(halfTimeEl.value) || 0) : 0;
+
+    if (!startTime || matchDuration <= 0) return '';
+
+    const totalMatches = numTeams * (numTeams - 1) / 2;
+    const maxSimultaneous = Math.max(1, Math.min(numFields, Math.floor(numTeams / 2)));
+    const numSlots = Math.ceil(totalMatches / maxSimultaneous);
+
+    const slotDuration = matchDuration + halfTimeInterval + breakDuration;
+    let totalMinutes = numSlots * slotDuration - breakDuration;
+    if (lunchBreak > 0) totalMinutes += lunchBreak - breakDuration;
+
+    const [hh, mm] = startTime.split(':').map(Number);
+    const endMin = hh * 60 + mm + totalMinutes;
+    const endH = Math.floor(endMin / 60) % 24;
+    const endM = endMin % 60;
+    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+}
+
+function updateEndTime(cat) {
+    const el = document.getElementById(`${cat}_end_time`);
+    if (el) el.value = computeEndTime(cat);
 }
 
 // Check if per-team total play time exceeds the budget
@@ -272,7 +316,21 @@ document.querySelectorAll('.calc-trigger').forEach(el => {
 document.querySelectorAll('.duration-input').forEach(el => {
     el.addEventListener('change', function() {
         checkOverrun(this.dataset.category);
+        updateEndTime(this.dataset.category);
     });
+});
+
+// Update end time on start time, num_fields, lunch_break, half_time_interval changes
+document.querySelectorAll('.start-time-input').forEach(el => {
+    el.addEventListener('change', function() { updateEndTime(this.dataset.category); });
+});
+CATEGORIES.forEach(cat => {
+    const numFields = document.querySelector(`[name="${cat}_num_fields"]`);
+    if (numFields) numFields.addEventListener('change', () => updateEndTime(cat));
+    const lunchBreak = document.getElementById(`${cat}_lunch_break`);
+    if (lunchBreak) lunchBreak.addEventListener('input', () => updateEndTime(cat));
+    const halfTime = document.getElementById(`${cat}_half_time_interval`);
+    if (halfTime) halfTime.addEventListener('input', () => updateEndTime(cat));
 });
 
 // Team name visibility
@@ -286,8 +344,15 @@ document.querySelectorAll('.team-count-select').forEach(select => {
     });
 });
 
-// Initial calculation for all categories
+// Initial calculation for all categories (includes updateEndTime via recalculate)
 CATEGORIES.forEach(cat => recalculate(cat));
+
+function deleteAllSessions() {
+    if (!confirm('Cancellare tutte le sessioni salvate?')) return;
+    fetch('/delete-sessions', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if (d.ok) location.reload(); });
+}
 
 // Clear all team name inputs for a category
 function clearTeamNames(cat) {

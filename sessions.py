@@ -13,6 +13,11 @@ def load_sessions() -> list:
         return json.load(f)
 
 
+def clear_sessions() -> None:
+    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump([], f, ensure_ascii=False)
+
+
 def save_session(label: str, form_data: dict) -> None:
     sessions = load_sessions()
     now = datetime.now()
