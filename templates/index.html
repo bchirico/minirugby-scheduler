@@ -90,7 +90,7 @@
         <div style="background: #e8f4f8; border: 1px solid #bee5eb; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
             <small style="color: #0c5460;">
                 {% if cat == "U6" %}
-                Nel calcolo dei tempi evento considerare: <strong>50% parco sportivo</strong> e <strong>50% gioco di rugby</strong>
+                Nel calcolo dei tempi evento considerare: <strong>50% parco sportivo</strong> e <strong>50% gioco rugby</strong>
                 {% else %}
                 Tempo consigliato per partita: <strong>{{ recommended_match_times[cat] }} min</strong>
                 {% endif %}
@@ -141,16 +141,21 @@
                 {% endfor %}
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.875em; color: #666;">
-                Copia da:
+                📋 Copia da:
                 {% for other in category_order %}{% if other != cat %}
                 <button type="button" class="outline" style="padding: 0.15rem 0.5rem; font-size: 0.8em; margin-left: 0.25rem;"
                         onclick="copyTeamNames('{{ other }}', '{{ cat }}')">{{ other }}</button>
                 {% endif %}{% endfor %}
+                <button type="button" class="outline" style="padding: 0.15rem 0.5rem; font-size: 0.8em; margin-left: 0.8rem;"
+                        onclick="shuffleTeamNames('{{ cat }}')">🔀 Mischia</button>
+                <button type="button" class="outline" style="padding: 0.15rem 0.5rem; font-size: 0.8em; margin-left: 0.8rem;"
+                        onclick="clearTeamNames('{{ cat }}')">🗑️ Cancella</button>
             </div>
         </fieldset>
     </details>
     {% endfor %}
 
+    <div id="nameValidationError" style="display:none; background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; border-left: 4px solid #dc3545; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;"></div>
     <button type="submit" id="submitBtn" disabled>Genera Calendari</button>
 </form>
 {% endblock %}
@@ -284,6 +289,27 @@ document.querySelectorAll('.team-count-select').forEach(select => {
 // Initial calculation for all categories
 CATEGORIES.forEach(cat => recalculate(cat));
 
+// Clear all team name inputs for a category
+function clearTeamNames(cat) {
+    if (!confirm(`Cancellare tutti i nomi squadra per ${cat}?`)) return;
+    document.querySelectorAll(`.${cat}-team-input`).forEach(input => {
+        input.value = '';
+    });
+}
+
+// Shuffle filled team names for a category (empty fields stay empty)
+function shuffleTeamNames(cat) {
+    if (!confirm(`Mischiare i nomi squadra per ${cat}?`)) return;
+    const inputs = [...document.querySelectorAll(`.${cat}-team-input`)].filter(i => i.style.display !== 'none');
+    const filled = inputs.filter(i => i.value.trim() !== '');
+    const values = filled.map(i => i.value.trim());
+    for (let i = values.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [values[i], values[j]] = [values[j], values[i]];
+    }
+    filled.forEach((input, idx) => { input.value = values[idx]; });
+}
+
 // Copy team names from one category to another
 function copyTeamNames(src, dst) {
     const srcCount = parseInt(document.querySelector(`[name="${src}_num_teams"]`).value);
@@ -312,5 +338,48 @@ categoryCheckboxes.forEach(cb => {
 });
 
 updateSubmitButton();
+
+// Validate duplicate team names for active categories
+function validateTeamNames() {
+    const errors = [];
+    CATEGORIES.forEach(cat => {
+        const checkbox = document.querySelector(`[name="${cat}_enabled"]`);
+        if (!checkbox || !checkbox.checked) return;
+
+        const count = parseInt(document.querySelector(`[name="${cat}_num_teams"]`).value);
+        const names = [];
+        for (let i = 1; i <= count; i++) {
+            const input = document.querySelector(`[name="${cat}_team_${i}"]`);
+            const val = input ? input.value.trim() : '';
+            names.push(val || `Squadra ${i}`);
+        }
+
+        const seen = new Set();
+        const duplicates = new Set();
+        names.forEach(name => {
+            const lower = name.toLowerCase();
+            if (seen.has(lower)) duplicates.add(name);
+            else seen.add(lower);
+        });
+
+        if (duplicates.size > 0) {
+            errors.push(`<strong>${cat}</strong>: nomi squadra duplicati: ${[...duplicates].join(', ')}`);
+        }
+    });
+    return errors;
+}
+
+document.getElementById('mainForm').addEventListener('submit', function(e) {
+    const errors = validateTeamNames();
+    const errorDiv = document.getElementById('nameValidationError');
+    if (errors.length > 0) {
+        e.preventDefault();
+        errorDiv.innerHTML = 'Correggi i seguenti errori prima di procedere:<br>' + errors.join('<br>');
+        errorDiv.style.display = '';
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        errorDiv.style.display = 'none';
+    }
+});
 </script>
 {% endblock %}

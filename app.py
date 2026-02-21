@@ -42,8 +42,7 @@ def parse_form(form) -> list[ScheduleRequest]:
         team_names = []
         for i in range(1, num_teams + 1):
             name = form.get(f"{cat}_team_{i}", "").strip()
-            if name:
-                team_names.append(name)
+            team_names.append(name if name else f"Squadra {i}")
 
         no_referee = bool(form.get(f"{cat}_no_referee"))
         half_time_interval = int(form.get(f"{cat}_half_time_interval", 0) or 0)
@@ -58,7 +57,7 @@ def parse_form(form) -> list[ScheduleRequest]:
                 total_game_time=total_game_time,
                 match_duration=match_duration,
                 break_duration=break_duration,
-                team_names=team_names if len(team_names) == num_teams else [],
+                team_names=team_names,
                 no_referee=no_referee,
                 half_time_interval=half_time_interval,
                 lunch_break=lunch_break,
